@@ -19,6 +19,11 @@ class TogetherAIService:
     def __init__(self, api_key=None):
         self.api_key = api_key
         self.active_tools = {}  # Track active tool executions
+        self.token_usage = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+        }
     
     def set_api_key(self, api_key):
         """Set the API key"""
@@ -29,6 +34,29 @@ class TogetherAIService:
         if not self.api_key:
             self.api_key = session.get('together_api_key')
         return self.api_key
+        
+    def get_token_usage(self):
+        """Get the current token usage"""
+        # Get from session if available
+        session_tokens = session.get('token_usage')
+        if session_tokens:
+            return session_tokens
+        return self.token_usage
+        
+    def update_token_usage(self, usage_data):
+        """Update token usage with new data"""
+        current_usage = self.get_token_usage()
+        
+        # Update counts
+        current_usage["prompt_tokens"] += usage_data.get("prompt_tokens", 0)
+        current_usage["completion_tokens"] += usage_data.get("completion_tokens", 0)
+        current_usage["total_tokens"] = current_usage["prompt_tokens"] + current_usage["completion_tokens"]
+        
+        # Store in session and instance
+        session['token_usage'] = current_usage
+        self.token_usage = current_usage
+        
+        return current_usage
     
     def chat_completion(self, messages, temperature=0.7, max_tokens=1024, tools=None, tool_choice=None):
         """Get a chat completion from Together AI with optional function calling"""
@@ -82,7 +110,13 @@ class TogetherAIService:
             )
             
             if response.status_code == 200:
-                return response.json()
+                response_data = response.json()
+                
+                # Track token usage if available in the response
+                if "usage" in response_data:
+                    self.update_token_usage(response_data["usage"])
+                
+                return response_data
             else:
                 return {
                     "error": f"API request failed with status code {response.status_code}",

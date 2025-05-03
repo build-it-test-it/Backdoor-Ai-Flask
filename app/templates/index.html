@@ -3,142 +3,46 @@
 {% block title %}Backdoor AI - Chat{% endblock %}
 
 {% block head %}
-<style>
-    .chat-container {
-        height: calc(100vh - 250px);
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-        background-color: #f8f9fa;
-        border-radius: 0.5rem;
-    }
-    
-    .chat-input {
-        margin-top: 1rem;
-    }
-    
-    .message {
-        margin-bottom: 1rem;
-        padding: 0.75rem;
-        border-radius: 0.5rem;
-        max-width: 80%;
-    }
-    
-    .user-message {
-        background-color: #007bff;
-        color: white;
-        margin-left: auto;
-    }
-    
-    .assistant-message {
-        background-color: #e9ecef;
-        color: #212529;
-        margin-right: auto;
-    }
-    
-    .message-time {
-        font-size: 0.75rem;
-        opacity: 0.7;
-        margin-top: 0.25rem;
-    }
-    
-    .typing-indicator {
-        display: none;
-        background-color: #e9ecef;
-        padding: 0.5rem 1rem;
-        border-radius: 1rem;
-        margin-bottom: 1rem;
-        width: fit-content;
-    }
-    
-    .typing-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #777;
-        margin-right: 3px;
-        animation: typing 1.4s infinite ease-in-out;
-    }
-    
-    .typing-dot:nth-child(1) { animation-delay: 0s; }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    
-    @keyframes typing {
-        0%, 60%, 100% { transform: translateY(0); }
-        30% { transform: translateY(-5px); }
-    }
-    
-    .markdown-content pre {
-        background-color: #f5f5f5;
-        padding: 1rem;
-        border-radius: 0.25rem;
-        overflow-x: auto;
-    }
-    
-    .markdown-content code {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.875em;
-    }
-    
-    .markdown-content p {
-        margin-bottom: 1rem;
-    }
-    
-    .markdown-content ul, .markdown-content ol {
-        margin-bottom: 1rem;
-        padding-left: 2rem;
-    }
-    
-    .markdown-content h1, .markdown-content h2, .markdown-content h3, 
-    .markdown-content h4, .markdown-content h5, .markdown-content h6 {
-        margin-top: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .api-key-warning {
-        display: none;
-    }
-</style>
+<!-- No additional styles needed as they're in the main CSS file -->
 {% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-chat-dots"></i> Chat with Backdoor AI
-                </h5>
+    <div class="col-lg-9">
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comment-dots me-2"></i> Chat with Backdoor AI
+                    </h5>
+                    <div id="agent-status-container" class="agent-status">
+                        <div class="status-indicator warning"></div>
+                        <div class="status-text">Checking status...</div>
+                    </div>
+                </div>
             </div>
             <div class="card-body p-0">
-                <div class="alert alert-warning api-key-warning m-3">
-                    <i class="bi bi-exclamation-triangle"></i> 
+                <div class="alert alert-warning api-key-warning m-3 fade-in" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i> 
                     <strong>API Key Required:</strong> Please set your Together AI API key in the 
                     <a href="{{ url_for('main.settings') }}" class="alert-link">settings</a> to use the chat.
                 </div>
                 
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
-                        <div class="typing-indicator">
+                        <div class="typing-indicator" id="typing-indicator">
                             <span class="typing-dot"></span>
                             <span class="typing-dot"></span>
                             <span class="typing-dot"></span>
                         </div>
                     </div>
                     
-                    <div class="chat-input p-3">
+                    <div class="chat-input">
                         <form id="chat-form">
                             <div class="input-group">
                                 <input type="text" id="user-input" class="form-control" placeholder="Type your message..." required>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-send"></i> Send
+                                    <i class="fas fa-paper-plane"></i> Send
                                 </button>
                             </div>
                         </form>
@@ -147,10 +51,63 @@
             </div>
         </div>
     </div>
+    
+    <div class="col-lg-3">
+        <!-- Token Usage Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i> Usage Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="token-usage-container" class="token-usage">
+                    <div class="token-usage-title">Token Usage</div>
+                    <div class="token-usage-stats">
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Prompt</div>
+                        </div>
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Completion</div>
+                        </div>
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="clearChat()">
+                        <i class="fas fa-trash-alt me-2"></i> Clear Chat
+                    </button>
+                    <a href="{{ url_for('main.download_chat') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-download me-2"></i> Download Chat
+                    </a>
+                    <a href="{{ url_for('main.settings') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-cog me-2"></i> Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script>
     // Store API keys and chat history
     const apiKey = "{{ together_api_key }}";
@@ -161,8 +118,10 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
-    const typingIndicator = document.querySelector('.typing-indicator');
+    const typingIndicator = document.getElementById('typing-indicator');
     const apiKeyWarning = document.querySelector('.api-key-warning');
+    const tokenUsageContainer = document.getElementById('token-usage-container');
+    const agentStatusContainer = document.getElementById('agent-status-container');
     
     // Check if API key is set
     if (!apiKey) {
@@ -171,8 +130,9 @@
     
     // Display chat history
     function displayChatHistory() {
-        chatMessages.innerHTML = '';
-        chatMessages.appendChild(typingIndicator);
+        // Keep the typing indicator but remove other messages
+        const messages = chatMessages.querySelectorAll('.message');
+        messages.forEach(msg => msg.remove());
         
         chatHistory.forEach(message => {
             addMessageToUI(message.role, message.content, message.timestamp);
@@ -185,7 +145,7 @@
     // Add a message to the UI
     function addMessageToUI(role, content, timestamp) {
         const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message');
+        messageDiv.classList.add('message', 'p-3', 'mb-3');
         
         if (role === 'user') {
             messageDiv.classList.add('user-message');
@@ -193,20 +153,23 @@
             messageDiv.classList.add('assistant-message');
         }
         
+        // Create content container
+        const contentDiv = document.createElement('div');
+        
         // Format content with markdown for assistant messages
         if (role === 'assistant') {
-            const markdownContent = document.createElement('div');
-            markdownContent.classList.add('markdown-content');
-            markdownContent.innerHTML = marked.parse(content);
-            messageDiv.appendChild(markdownContent);
+            contentDiv.classList.add('markdown-content');
+            contentDiv.innerHTML = marked.parse(content);
         } else {
-            messageDiv.textContent = content;
+            contentDiv.textContent = content;
         }
+        
+        messageDiv.appendChild(contentDiv);
         
         // Add timestamp if available
         if (timestamp) {
             const timeDiv = document.createElement('div');
-            timeDiv.classList.add('message-time');
+            timeDiv.classList.add('message-time', 'text-muted', 'small');
             timeDiv.textContent = timestamp;
             messageDiv.appendChild(timeDiv);
         }
@@ -216,7 +179,7 @@
         
         // Apply syntax highlighting to code blocks
         if (role === 'assistant') {
-            document.querySelectorAll('pre code').forEach((block) => {
+            messageDiv.querySelectorAll('pre code').forEach((block) => {
                 hljs.highlightElement(block);
             });
         }
@@ -275,12 +238,12 @@
                 
                 // Display the new messages (should be the last two in the history)
                 if (chatHistory.length >= 2) {
-                    const userMsg = chatHistory[chatHistory.length - 2];
-                    const assistantMsg = chatHistory[chatHistory.length - 1];
-                    
                     // Clear existing messages and display full history
                     displayChatHistory();
                 }
+                
+                // Update token usage
+                updateTokenUsage();
             } else {
                 hideTypingIndicator();
                 
@@ -295,6 +258,135 @@
             const timestamp = new Date().toLocaleString();
             addMessageToUI('assistant', `Error: ${error.message}`, timestamp);
         }
+    }
+    
+    // Update token usage display
+    function updateTokenUsage() {
+        fetch('/api/token-usage')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.token_usage) {
+                    const usage = data.token_usage;
+                    tokenUsageContainer.innerHTML = `
+                        <div class="token-usage-title">Token Usage</div>
+                        <div class="token-usage-stats">
+                            <div class="token-stat">
+                                <div class="token-value">${usage.prompt_tokens.toLocaleString()}</div>
+                                <div class="token-label">Prompt</div>
+                            </div>
+                            <div class="token-stat">
+                                <div class="token-value">${usage.completion_tokens.toLocaleString()}</div>
+                                <div class="token-label">Completion</div>
+                            </div>
+                            <div class="token-stat">
+                                <div class="token-value">${usage.total_tokens.toLocaleString()}</div>
+                                <div class="token-label">Total</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching token usage:', error);
+            });
+    }
+    
+    // Update agent status
+    function updateAgentStatus() {
+        fetch('/api/agent-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.status) {
+                    const status = data.status;
+                    let statusClass = status.ready ? 'ready' : 'warning';
+                    let statusText = status.ready ? 'Agent Ready' : 'Agent Not Ready';
+                    
+                    if (!status.api_key_set) {
+                        statusClass = 'error';
+                        statusText = 'API Key Missing';
+                    } else if (!status.initialized) {
+                        statusText = 'Initializing...';
+                    }
+                    
+                    agentStatusContainer.innerHTML = `
+                        <div class="status-indicator ${statusClass}"></div>
+                        <div class="status-text">${statusText}</div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching agent status:', error);
+                agentStatusContainer.innerHTML = `
+                    <div class="status-indicator error"></div>
+                    <div class="status-text">Connection Error</div>
+                `;
+            });
+    }
+    
+    // Clear chat history
+    function clearChat() {
+        if (confirm('Are you sure you want to clear the chat history?')) {
+            chatHistory = [];
+            displayChatHistory();
+            
+            // Add welcome message
+            const timestamp = new Date().toLocaleString();
+            const welcomeMessage = "Hello! I'm Backdoor AI, your assistant for the Backdoor app. I can help you with app signing, source management, and other app-related tasks. How can I assist you today?";
+            
+            // Add to UI
+            addMessageToUI('assistant', welcomeMessage, timestamp);
+            
+            // Add to history
+            chatHistory.push({
+                role: 'assistant',
+                content: welcomeMessage,
+                timestamp: timestamp
+            });
+            
+            // Show success message
+            showToast('Chat history cleared successfully!');
+        }
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        // Create toast content
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Add to container
+        toastContainer.appendChild(toastEl);
+        
+        // Initialize and show the toast
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+        
+        // Remove toast after it's hidden
+        toastEl.addEventListener('hidden.bs.toast', function() {
+            toastEl.remove();
+        });
     }
     
     // Handle form submission
@@ -317,6 +409,7 @@
     
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
+        // Display chat history
         displayChatHistory();
         
         // Add welcome message if history is empty
@@ -334,6 +427,16 @@
                 timestamp: timestamp
             });
         }
+        
+        // Initialize token usage display
+        updateTokenUsage();
+        
+        // Initialize agent status
+        updateAgentStatus();
+        
+        // Set up polling for agent status and token usage
+        setInterval(updateAgentStatus, 10000); // Every 10 seconds
+        setInterval(updateTokenUsage, 30000);  // Every 30 seconds
     });
 </script>
 {% endblock %}
