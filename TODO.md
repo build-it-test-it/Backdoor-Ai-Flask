@@ -16,6 +16,6 @@ I want the frontend to provide users with a interface to interact with the model
 
 ## Prerequisites
 
-- **Docker**: Required for OpenHands sandbox runtime.
+-**Docker make sure we use dockers where necessary for different things
 - **Python 3.11.11**: For Flask and dependencies. Renders default python version
 - **Render.com Account**: For deployment on the free tier.
