@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, current_app, session
 import requests
 import json
 import os
+import subprocess
+import sys
 from datetime import datetime
 import uuid
 
@@ -43,6 +45,10 @@ def chat():
         # Add app-specific context
         context["app_context"] = app_context
     
+    # Ensure session ID exists
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+    
     # Process the chat message
     try:
         result = model_service.process_chat(
@@ -63,7 +69,8 @@ def chat():
             'history': result.get("history", []),
             'interaction_id': result.get("interaction_id", ""),
             'commands': result.get("commands", []),
-            'command_results': result.get("command_results", [])
+            'command_results': result.get("command_results", []),
+            'tool_results': result.get("tool_results", [])
         })
     
     except Exception as e:
@@ -232,3 +239,214 @@ def update_settings():
         'success': True,
         'message': 'Settings updated successfully'
     })
+
+@bp.route('/execute_bash', methods=['POST'])
+def execute_bash():
+    """Execute a bash command and return the result."""
+    from app.ai.tools import tool_registry
+    
+    data = request.json
+    
+    # Get command
+    command = data.get('command')
+    if not command:
+        return jsonify({
+            'error': 'Command is required'
+        }), 400
+    
+    # Get is_input flag
+    is_input = data.get('is_input', 'false')
+    
+    # Execute the command
+    result = tool_registry.execute_tool('execute_bash', command=command, is_input=is_input)
+    
+    return jsonify(result)
+
+@bp.route('/file', methods=['GET', 'POST', 'PUT'])
+def file_operations():
+    """Handle file operations."""
+    from app.ai.tools import tool_registry
+    
+    if request.method == 'GET':
+        # View a file or directory
+        path = request.args.get('path')
+        if not path:
+            return jsonify({
+                'error': 'Path is required'
+            }), 400
+        
+        view_range = request.args.get('view_range')
+        if view_range:
+            try:
+                view_range = json.loads(view_range)
+            except json.JSONDecodeError:
+                view_range = None
+        
+        result = tool_registry.execute_tool('str_replace_editor', command='view', path=path, view_range=view_range)
+        return jsonify(result)
+    
+    elif request.method == 'POST':
+        # Create a file
+        data = request.json
+        
+        path = data.get('path')
+        if not path:
+            return jsonify({
+                'error': 'Path is required'
+            }), 400
+        
+        file_text = data.get('file_text')
+        if file_text is None:
+            return jsonify({
+                'error': 'File text is required'
+            }), 400
+        
+        result = tool_registry.execute_tool('str_replace_editor', command='create', path=path, file_text=file_text)
+        return jsonify(result)
+    
+    elif request.method == 'PUT':
+        # Edit a file
+        data = request.json
+        
+        path = data.get('path')
+        if not path:
+            return jsonify({
+                'error': 'Path is required'
+            }), 400
+        
+        command = data.get('command')
+        if command not in ['str_replace', 'insert', 'undo_edit']:
+            return jsonify({
+                'error': 'Invalid command'
+            }), 400
+        
+        if command == 'str_replace':
+            old_str = data.get('old_str')
+            if not old_str:
+                return jsonify({
+                    'error': 'old_str is required for str_replace command'
+                }), 400
+            
+            new_str = data.get('new_str', '')
+            
+            result = tool_registry.execute_tool('str_replace_editor', command=command, path=path, old_str=old_str, new_str=new_str)
+        
+        elif command == 'insert':
+            insert_line = data.get('insert_line')
+            if insert_line is None:
+                return jsonify({
+                    'error': 'insert_line is required for insert command'
+                }), 400
+            
+            new_str = data.get('new_str')
+            if not new_str:
+                return jsonify({
+                    'error': 'new_str is required for insert command'
+                }), 400
+            
+            result = tool_registry.execute_tool('str_replace_editor', command=command, path=path, insert_line=insert_line, new_str=new_str)
+        
+        elif command == 'undo_edit':
+            result = tool_registry.execute_tool('str_replace_editor', command=command, path=path)
+        
+        return jsonify(result)
+    
+    return jsonify({
+        'error': 'Invalid method'
+    }), 405
+
+@bp.route('/execute_python', methods=['POST'])
+def execute_python():
+    """Execute Python code and return the result."""
+    from app.ai.tools import tool_registry
+    
+    data = request.json
+    
+    # Get code
+    code = data.get('code')
+    if not code:
+        return jsonify({
+            'error': 'Code is required'
+        }), 400
+    
+    # Execute the code
+    result = tool_registry.execute_tool('execute_ipython_cell', code=code)
+    
+    return jsonify(result)
+
+@bp.route('/web_read', methods=['GET'])
+def web_read():
+    """Read content from a webpage."""
+    from app.ai.tools import tool_registry
+    
+    # Get URL
+    url = request.args.get('url')
+    if not url:
+        return jsonify({
+            'error': 'URL is required'
+        }), 400
+    
+    # Read the webpage
+    result = tool_registry.execute_tool('web_read', url=url)
+    
+    return jsonify(result)
+
+@bp.route('/browser', methods=['POST'])
+def browser():
+    """Interact with a browser."""
+    from app.ai.tools import tool_registry
+    
+    data = request.json
+    
+    # Get code
+    code = data.get('code')
+    if not code:
+        return jsonify({
+            'error': 'Code is required'
+        }), 400
+    
+    # Execute the browser code
+    result = tool_registry.execute_tool('browser', code=code)
+    
+    return jsonify(result)
+
+@bp.route('/think', methods=['POST'])
+def think():
+    """Log a thought."""
+    from app.ai.tools import tool_registry
+    
+    data = request.json
+    
+    # Get thought
+    thought = data.get('thought')
+    if not thought:
+        return jsonify({
+            'error': 'Thought is required'
+        }), 400
+    
+    # Log the thought
+    result = tool_registry.execute_tool('think', thought=thought)
+    
+    return jsonify(result)
+
+@bp.route('/finish', methods=['POST'])
+def finish():
+    """Signal task completion."""
+    from app.ai.tools import tool_registry
+    
+    data = request.json
+    
+    # Get message
+    message = data.get('message')
+    if not message:
+        return jsonify({
+            'error': 'Message is required'
+        }), 400
+    
+    # Get task_completed
+    task_completed = data.get('task_completed', 'false')
+    
+    # Signal task completion
+    result = tool_registry.execute_tool('finish', message=message, task_completed=task_completed)
+    
+    return jsonify(result)

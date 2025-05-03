@@ -1,20 +1,24 @@
 import json
 import os
 import requests
+import uuid
 from datetime import datetime
 from flask import current_app, session
+from typing import Any, Dict, List, Optional, Union
 
 from app.ai.context_provider import context_provider
 from app.ai.behavior_tracker import behavior_tracker
+from app.ai.tools import tool_registry
 
 class TogetherAIService:
-    """Service for interacting with Together AI's API, inspired by Backdoor-signer's OpenAIService"""
+    """Service for interacting with Together AI's API, inspired by OpenHands LLM implementation"""
     
     MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
     API_URL = "https://api.together.xyz/v1/chat/completions"
     
     def __init__(self, api_key=None):
         self.api_key = api_key
+        self.active_tools = {}  # Track active tool executions
     
     def set_api_key(self, api_key):
         """Set the API key"""
@@ -26,8 +30,8 @@ class TogetherAIService:
             self.api_key = session.get('together_api_key')
         return self.api_key
     
-    def chat_completion(self, messages, temperature=0.7, max_tokens=1024):
-        """Get a chat completion from Together AI"""
+    def chat_completion(self, messages, temperature=0.7, max_tokens=1024, tools=None, tool_choice=None):
+        """Get a chat completion from Together AI with optional function calling"""
         api_key = self.get_api_key()
         if not api_key:
             return {
@@ -62,6 +66,14 @@ class TogetherAIService:
             "max_tokens": max_tokens
         }
         
+        # Add tools if provided
+        if tools:
+            payload["tools"] = tools
+        
+        # Add tool_choice if provided
+        if tool_choice:
+            payload["tool_choice"] = tool_choice
+        
         try:
             response = requests.post(
                 self.API_URL,
@@ -82,7 +94,7 @@ class TogetherAIService:
             }
     
     def process_chat(self, user_message, chat_history=None, context=None):
-        """Process a chat message and handle all the context and tracking, similar to Backdoor-signer's sendMessage"""
+        """Process a chat message and handle all the context and tracking, similar to OpenHands implementation"""
         if chat_history is None:
             chat_history = self.load_chat_history()
         
@@ -102,10 +114,20 @@ class TogetherAIService:
         # Add chat history
         for msg in chat_history:
             if msg.get('role') in ['user', 'assistant']:
-                messages.append({
+                message_to_add = {
                     'role': msg.get('role'),
                     'content': msg.get('content')
-                })
+                }
+                
+                # Include tool calls and results if present
+                if msg.get('tool_calls'):
+                    message_to_add['tool_calls'] = msg.get('tool_calls')
+                
+                if msg.get('tool_call_id'):
+                    message_to_add['tool_call_id'] = msg.get('tool_call_id')
+                    message_to_add['name'] = msg.get('name')
+                
+                messages.append(message_to_add)
         
         # Add the current user message
         messages.append({
@@ -120,8 +142,11 @@ class TogetherAIService:
             details={"message": user_message}
         )
         
-        # Call the API
-        response_data = self.chat_completion(messages)
+        # Get tool schemas
+        tools = tool_registry.get_tool_schemas()
+        
+        # Call the API with tools
+        response_data = self.chat_completion(messages, tools=tools)
         
         if "error" in response_data:
             error_message = response_data.get("error")
@@ -142,7 +167,9 @@ class TogetherAIService:
             }
         
         # Extract the assistant's response
-        assistant_message = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        assistant_response = response_data.get('choices', [{}])[0].get('message', {})
+        assistant_message = assistant_response.get('content', '')
+        tool_calls = assistant_response.get('tool_calls', [])
         
         # Add user message to history
         user_msg = {
@@ -156,8 +183,13 @@ class TogetherAIService:
         assistant_msg = {
             'role': 'assistant',
             'content': assistant_message,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
         }
+        
+        # Add tool calls if present
+        if tool_calls:
+            assistant_msg['tool_calls'] = tool_calls
+        
         chat_history.append(assistant_msg)
         
         # Save updated history
@@ -170,7 +202,56 @@ class TogetherAIService:
             context=context
         )
         
-        # Extract and process any commands in the response
+        # Process tool calls if present
+        tool_results = []
+        if tool_calls:
+            for tool_call in tool_calls:
+                tool_call_id = tool_call.get('id')
+                function = tool_call.get('function', {})
+                tool_name = function.get('name')
+                tool_args = json.loads(function.get('arguments', '{}'))
+                
+                # Execute the tool
+                tool_result = tool_registry.execute_tool(tool_name, **tool_args)
+                
+                # Add tool result to history
+                tool_result_msg = {
+                    'role': 'tool',
+                    'tool_call_id': tool_call_id,
+                    'name': tool_name,
+                    'content': json.dumps(tool_result),
+                    'timestamp': datetime.now().isoformat()
+                }
+                chat_history.append(tool_result_msg)
+                tool_results.append(tool_result)
+            
+            # Save updated history with tool results
+            self.save_chat_history(chat_history)
+            
+            # If there are tool calls, make a follow-up API call to get the final response
+            if tool_results:
+                # Call the API again with the tool results
+                follow_up_response = self.chat_completion(chat_history)
+                
+                if "error" not in follow_up_response:
+                    # Extract the follow-up response
+                    follow_up_message = follow_up_response.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    
+                    # Add follow-up response to history
+                    follow_up_msg = {
+                        'role': 'assistant',
+                        'content': follow_up_message,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    chat_history.append(follow_up_msg)
+                    
+                    # Update the assistant message for the return value
+                    assistant_message = follow_up_message
+                    
+                    # Save updated history
+                    self.save_chat_history(chat_history)
+        
+        # Extract and process any commands in the response (legacy support)
         commands = context_provider.extract_commands(assistant_message)
         command_results = []
         
@@ -193,7 +274,8 @@ class TogetherAIService:
             "history": chat_history,
             "interaction_id": interaction.id,
             "commands": commands,
-            "command_results": command_results
+            "command_results": command_results,
+            "tool_results": tool_results
         }
     
     def record_feedback(self, interaction_id, rating, comment=None):
