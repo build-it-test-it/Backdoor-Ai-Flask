@@ -1,25 +1,27 @@
-/* Custom styles for Backdoor AI - Enhanced Version */
+/* Custom styles for Backdoor AI - Enhanced Version 2.0 */
 
 :root {
-    --primary-color: #4f46e5;
-    --primary-hover: #4338ca;
+    --primary-color: #4a6cf7;
+    --primary-hover: #3a5ce5;
     --secondary-color: #10b981;
     --accent-color: #f59e0b;
-    --dark-bg: #111827;
-    --dark-card: #1f2937;
-    --dark-input: #374151;
-    --light-bg: #f9fafb;
+    --dark-bg: #121212;
+    --dark-card: #1e1e1e;
+    --dark-input: #2d2d2d;
+    --light-bg: #f8f9fa;
     --light-card: #ffffff;
     --light-input: #f3f4f6;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
-    --info: #3b82f6;
+    --success: #28a745;
+    --warning: #ffc107;
+    --error: #dc3545;
+    --info: #17a2b8;
     --border-radius: 0.75rem;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --transition: all 0.2s ease-in-out;
+    --transition: all 0.3s ease;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --code-font-family: 'Fira Code', SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 body {
@@ -100,11 +102,7 @@ body {
     position: relative;
     word-wrap: break-word;
     margin-bottom: 1.5rem;
-    padding: 1rem;
-    border-radius: var(--border-radius);
-    max-width: 80%;
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
+    display: flex;
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -113,19 +111,53 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.user-message {
+.message-user {
+    justify-content: flex-end;
+}
+
+.message-assistant {
+    justify-content: flex-start;
+}
+
+.message-system {
+    justify-content: center;
+}
+
+.message-content {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    max-width: 80%;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.message-user .message-content {
     background-color: var(--primary-color);
     color: white;
-    margin-left: auto;
     border-bottom-right-radius: 0.25rem;
 }
 
-.assistant-message {
+.message-assistant .message-content {
     background-color: var(--light-card);
     color: #111827;
-    margin-right: auto;
     border-bottom-left-radius: 0.25rem;
     border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.message-system .message-content {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #4b5563;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 1rem;
+    max-width: 90%;
+}
+
+.message-icon {
+    display: flex;
+    align-items: flex-end;
+    margin-right: 0.5rem;
+    font-size: 1.25rem;
 }
 
 .message-time {
@@ -137,7 +169,8 @@ body {
 
 /* Typing indicator */
 .typing-indicator {
-    display: none;
+    display: flex;
+    align-items: center;
     background-color: var(--light-card);
     padding: 0.75rem 1.25rem;
     border-radius: var(--border-radius);
@@ -145,6 +178,10 @@ body {
     width: fit-content;
     box-shadow: var(--shadow-sm);
     border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.typing-indicator.d-none {
+    display: none;
 }
 
 .typing-dot {
@@ -167,7 +204,7 @@ body {
 }
 
 /* Agent status indicator */
-.agent-status {
+.agent-status-display {
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
@@ -178,25 +215,63 @@ body {
     transition: var(--transition);
 }
 
-.status-indicator {
+.agent-status-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     margin-right: 0.5rem;
     background-color: var(--warning);
+    position: relative;
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
 }
 
-.status-indicator.ready {
+.agent-status-dot.ready {
     background-color: var(--success);
+    box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
 }
 
-.status-indicator.error {
+.agent-status-dot.ready::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--success);
+    opacity: 0.5;
+    animation: pulse 2s infinite;
+    z-index: -1;
+}
+
+.agent-status-dot.error {
     background-color: var(--error);
+    box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
 }
 
-.status-text {
+.agent-status-text {
     font-size: 0.875rem;
     font-weight: 500;
+    color: #4b5563;
+}
+
+.dark-mode .agent-status-text {
+    color: #d1d5db;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    70% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
 }
 
 /* Token usage display */
@@ -213,29 +288,80 @@ body {
 .token-usage-title {
     font-size: 0.875rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.token-usage-title i {
+    color: var(--primary-color);
 }
 
 .token-usage-stats {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .token-stat {
-    text-align: center;
-    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.token-stat.total {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    font-weight: 600;
+}
+
+.dark-mode .token-stat.total {
+    border-top-color: #374151;
 }
 
 .token-value {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--primary-color);
 }
 
 .token-label {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     color: #6b7280;
+}
+
+/* Agent status display */
+.agent-status-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.agent-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.agent-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--warning);
+}
+
+.agent-status-dot.ready {
+    background-color: var(--success);
+}
+
+.agent-status-dot.error {
+    background-color: var(--error);
 }
 
 /* Code block styling */
@@ -479,6 +605,90 @@ body.dark-mode {
 
 .dark-mode-toggle:hover {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Repository selector */
+.repo-selector {
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    transition: var(--transition);
+    color: white;
+    margin-right: 1rem;
+}
+
+.repo-selector:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.repo-selector i {
+    font-size: 1rem;
+}
+
+.repo-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.repo-search {
+    position: sticky;
+    top: 0;
+    background-color: var(--light-card);
+    padding: 1rem;
+    z-index: 10;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dark-mode .repo-search {
+    background-color: var(--dark-card);
+    border-color: #374151;
+}
+
+/* Repository info */
+.repo-info {
+    padding: 0.75rem 1rem;
+    background-color: var(--light-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.dark-mode .repo-info {
+    background-color: var(--dark-card);
+    border-color: #374151;
+}
+
+.repo-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.repo-info-header h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.repo-info-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.repo-info-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--secondary-color);
 }
 
 /* Animations */

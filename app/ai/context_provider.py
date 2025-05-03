@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import request, session, current_app
 
 from app.ai.behavior_tracker import behavior_tracker
+from app.ai.github_service import github_service
 
 class AppContext:
     """Provides context about the application state, inspired by OpenHands context implementation"""
@@ -109,6 +110,39 @@ class AppContext:
             "execute_ipython_cell": "Run Python code in IPython",
             "str_replace_editor": "View, create, and edit files"
         }
+        
+    @staticmethod
+    def get_github_info():
+        """Get information about the current GitHub repository"""
+        # Get GitHub status
+        github_status = github_service.get_status()
+        
+        # Get current repository
+        current_repo = github_service.get_current_repo()
+        
+        if not current_repo or not github_status.get('connected'):
+            return {
+                "has_repository": False,
+                "repository": None,
+                "github_connected": github_status.get('connected', False),
+                "token_set": github_status.get('token_set', False)
+            }
+            
+        # Get repository info
+        repo_info = github_service.get_repo_info(current_repo)
+        if isinstance(repo_info, dict) and "error" in repo_info:
+            repo_info = session.get("repo_info", {})
+        else:
+            # Cache the repo info in session
+            session["repo_info"] = repo_info
+            session["repo_last_updated"] = datetime.now().isoformat()
+            
+        return {
+            "has_repository": True,
+            "repository": current_repo,
+            "repository_info": repo_info,
+            "last_updated": session.get("repo_last_updated", datetime.now().isoformat())
+        }
 
 class ContextProvider:
     """Provides rich context to the AI model, inspired by OpenHands context implementation"""
@@ -122,6 +156,7 @@ class ContextProvider:
         command_context = AppContext.get_command_context()
         environment_info = AppContext.get_environment_info()
         available_tools = AppContext.get_available_tools()
+        github_info = AppContext.get_github_info()
         recent_behaviors = [b.to_dict() for b in behavior_tracker.get_recent_behaviors(5)]
         recent_interactions = [i.to_dict() for i in behavior_tracker.get_recent_interactions(3)]
         
@@ -132,6 +167,7 @@ class ContextProvider:
             "command_context": command_context,
             "environment_info": environment_info,
             "available_tools": available_tools,
+            "github_info": github_info,
             "recent_behaviors": recent_behaviors,
             "recent_interactions": recent_interactions,
             "timestamp": datetime.now().isoformat()
@@ -188,7 +224,15 @@ Your primary role is to assist users by executing commands, modifying code, and 
 <SECURITY>
 * Only use GITHUB_TOKEN and other credentials in ways the user has explicitly requested and would expect.
 * Use APIs to work with GitHub or other platforms, unless the user asks otherwise or your task requires browsing.
+* When working with GitHub repositories, always check the current repository context first.
 </SECURITY>
+
+<GITHUB_REPOSITORY>
+* The user may have selected a specific GitHub repository to work with.
+* Always check the github_info context to see if a repository is selected.
+* If a repository is selected, make sure to use it as the context for your responses.
+* You can help the user browse, analyze, and modify files in the selected repository.
+</GITHUB_REPOSITORY>
 
 <ENVIRONMENT_SETUP>
 * When user asks you to run an application, don't stop if the application is not installed. Instead, please install the application and run the command again.

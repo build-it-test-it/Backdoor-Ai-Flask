@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +18,18 @@
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="fas fa-robot"></i> Backdoor AI
             </a>
+            
+            <!-- Repository selector -->
+            <div id="repo-selector" class="repo-selector" data-bs-toggle="modal" data-bs-target="#repo-modal">
+                <i class="fas fa-code-branch"></i>
+                <span id="current-repo" class="text-truncate" style="max-width: 150px;">No repository selected</span>
+            </div>
+            
+            <!-- Agent status indicator -->
+            <div id="agent-status" class="agent-status-indicator ms-2" title="Agent status">
+                <span class="badge bg-warning">Initializing</span>
+            </div>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -47,6 +59,38 @@
             </div>
         </div>
     </nav>
+    
+    <!-- Repository Modal -->
+    <div class="modal fade" id="repo-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Repository</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="repo-search mb-3">
+                        <form id="repo-search-form">
+                            <div class="input-group">
+                                <input type="text" id="repo-search-input" class="form-control" placeholder="Search repositories...">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="repo-list" class="list-group repo-list">
+                        <div class="text-center text-muted py-3">
+                            Click to load your repositories
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -86,6 +130,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/github.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/token-tracker.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

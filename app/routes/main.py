@@ -40,6 +40,9 @@ init_openhands_env()
 
 @bp.route('/')
 def index():
+    from app.ai.model_service import model_service
+    from app.ai.github_service import github_service
+    
     # Get the session ID or create a new one
     session_id = session.get('session_id')
     if not session_id:
@@ -61,17 +64,71 @@ def index():
             # If the file is corrupted, start with an empty history
             chat_history = []
     
+    # Get API keys from session or config
+    together_api_key = session.get('together_api_key') or current_app.config.get('TOGETHER_API_KEY', '')
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN', '')
+    
+    # Set API keys in services
+    if together_api_key:
+        model_service.set_api_key(together_api_key)
+    
+    if github_token:
+        github_service.set_token(github_token)
+    
+    # Get current repository if any
+    current_repo = github_service.get_current_repo()
+    
+    # Get GitHub status
+    github_status = github_service.get_status()
+    
+    # Get repository info if available
+    repo_info = None
+    if current_repo and github_status.get('connected'):
+        repo_info = github_service.get_repo_info(current_repo)
+        if isinstance(repo_info, dict) and "error" in repo_info:
+            repo_info = None
+    
+    # Get model settings
+    model_name = model_service.get_model()
+    temperature = session.get('temperature', 0.7)
+    max_tokens = session.get('max_tokens', 2048)
+    streaming = session.get('streaming', True)
+    
+    # Get token usage
+    token_usage = model_service.get_token_usage()
+    
+    # Check agent status
+    agent_status = model_service.get_status()
+    
     return render_template('index.html', 
                           chat_history=chat_history,
-                          together_api_key=current_app.config.get('TOGETHER_API_KEY', ''),
-                          github_token=current_app.config.get('GITHUB_TOKEN', ''))
+                          together_api_key=together_api_key,
+                          github_token=github_token,
+                          current_repo=current_repo,
+                          repo_info=repo_info,
+                          github_status=github_status,
+                          model_name=model_name,
+                          temperature=temperature,
+                          max_tokens=max_tokens,
+                          streaming=streaming,
+                          token_usage=token_usage,
+                          agent_status=agent_status)
 
 @bp.route('/settings', methods=['GET', 'POST'])
 def settings():
+    from app.ai.model_service import model_service
+    from app.ai.github_service import github_service
+    
     if request.method == 'POST':
         # Update API keys
         together_api_key = request.form.get('together_api_key', '')
         github_token = request.form.get('github_token', '')
+        
+        # Update model settings
+        model_name = request.form.get('model_name')
+        temperature = request.form.get('temperature')
+        max_tokens = request.form.get('max_tokens')
+        streaming = 'streaming' in request.form  # Checkbox value
         
         # Store in app config
         current_app.config['TOGETHER_API_KEY'] = together_api_key
@@ -81,13 +138,76 @@ def settings():
         session['together_api_key'] = together_api_key
         session['github_token'] = github_token
         
+        # Update model settings in session
+        if model_name:
+            model_service.set_model(model_name)
+            session['model_name'] = model_name
+        
+        if temperature:
+            try:
+                temperature = float(temperature)
+                session['temperature'] = temperature
+            except (ValueError, TypeError):
+                pass
+        
+        if max_tokens:
+            try:
+                max_tokens = int(max_tokens)
+                session['max_tokens'] = max_tokens
+            except (ValueError, TypeError):
+                pass
+        
+        session['streaming'] = streaming
+        
+        # Set API keys in services
+        if together_api_key:
+            model_service.set_api_key(together_api_key)
+        
+        if github_token:
+            github_service.set_token(github_token)
+        
         flash('Settings updated successfully!', 'success')
         return redirect(url_for('main.index'))
     
     # For GET requests, display the settings form
+    together_api_key = session.get('together_api_key') or current_app.config.get('TOGETHER_API_KEY', '')
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN', '')
+    
+    # Get GitHub status and repository info
+    github_status = github_service.get_status()
+    current_repo = github_service.get_current_repo()
+    
+    # Get repository info if available
+    repo_info = None
+    if current_repo and github_status.get('connected'):
+        repo_info = github_service.get_repo_info(current_repo)
+        if isinstance(repo_info, dict) and "error" in repo_info:
+            repo_info = None
+    
+    # Get model settings
+    model_name = model_service.get_model()
+    temperature = session.get('temperature', 0.7)
+    max_tokens = session.get('max_tokens', 2048)
+    streaming = session.get('streaming', True)
+    
+    # Get token usage
+    token_usage = model_service.get_token_usage()
+    
+    # Get agent status
+    agent_status = model_service.get_status()
+    
     return render_template('settings.html',
-                          together_api_key=current_app.config.get('TOGETHER_API_KEY', ''),
-                          github_token=current_app.config.get('GITHUB_TOKEN', ''))
+                          together_api_key=together_api_key,
+                          github_token=github_token,
+                          current_repo=current_repo,
+                          repo_info=repo_info,
+                          github_status=github_status,
+                          model_name=model_name,
+                          temperature=temperature,
+                          max_tokens=max_tokens,
+                          streaming=streaming,
+                          token_usage=token_usage,
+                          agent_status=agent_status)
 
 @bp.route('/download-chat')
 def download_chat():

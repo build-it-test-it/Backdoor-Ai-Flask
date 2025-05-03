@@ -13,27 +13,114 @@ from app.ai.tools import tool_registry
 class TogetherAIService:
     """Service for interacting with Together AI's API, inspired by OpenHands LLM implementation"""
     
-    MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
+    DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
     API_URL = "https://api.together.xyz/v1/chat/completions"
     
     def __init__(self, api_key=None):
         self.api_key = api_key
         self.active_tools = {}  # Track active tool executions
+        self.model_id = self.DEFAULT_MODEL
+        self.initialized = False
+        self.ready = False
+        
+        # Initialize token usage
         self.token_usage = {
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "total_tokens": 0
         }
+        
+        # Load token usage from session if available
+        session_tokens = session.get('token_usage')
+        if session_tokens:
+            self.token_usage = session_tokens
     
     def set_api_key(self, api_key):
         """Set the API key"""
         self.api_key = api_key
+        
+        # Check if the API key is valid by making a test request
+        if api_key:
+            self.check_api_key()
     
     def get_api_key(self):
         """Get the API key from session if not set"""
         if not self.api_key:
             self.api_key = session.get('together_api_key')
         return self.api_key
+    
+    def set_model(self, model_id):
+        """Set the model ID"""
+        self.model_id = model_id or self.DEFAULT_MODEL
+        session['model_id'] = self.model_id
+        return self.model_id
+    
+    def get_model(self):
+        """Get the model ID from session if not set"""
+        if not hasattr(self, 'model_id') or not self.model_id:
+            self.model_id = session.get('model_id') or self.DEFAULT_MODEL
+        return self.model_id
+    
+    def get_status(self):
+        """Get the current status of the model service"""
+        api_key = self.get_api_key()
+        
+        # Check if OpenHands is initialized
+        openhands_initialized = os.path.exists('/tmp/openhands/initialized')
+        
+        # Get token usage
+        token_usage = self.get_token_usage()
+        
+        return {
+            "ready": self.ready and openhands_initialized and bool(api_key),
+            "initialized": self.initialized and openhands_initialized,
+            "api_key_set": bool(api_key),
+            "model": self.get_model(),
+            "token_usage": token_usage,
+            "openhands_initialized": openhands_initialized,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    def check_api_key(self):
+        """Check if the API key is valid"""
+        api_key = self.get_api_key()
+        if not api_key:
+            self.ready = False
+            return False
+        
+        # Make a simple request to check if the API key is valid
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.get_model(),
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Hello"}
+            ],
+            "max_tokens": 1  # Minimize token usage for the test
+        }
+        
+        try:
+            response = requests.post(
+                self.API_URL,
+                headers=headers,
+                json=payload,
+                timeout=5  # Short timeout for the test
+            )
+            
+            if response.status_code == 200:
+                self.ready = True
+                self.initialized = True
+                return True
+            else:
+                self.ready = False
+                return False
+        except Exception:
+            self.ready = False
+            return False
         
     def get_token_usage(self):
         """Get the current token usage"""
@@ -88,7 +175,7 @@ class TogetherAIService:
         }
         
         payload = {
-            "model": self.MODEL_ID,
+            "model": self.get_model(),
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens

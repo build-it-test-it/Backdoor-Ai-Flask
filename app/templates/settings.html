@@ -14,9 +14,11 @@
             <div class="card-body">
                 <form method="post" id="settings-form">
                     <div class="mb-4">
-                        <label for="together_api_key" class="form-label fw-bold">Together AI API Key</label>
+                        <label for="together_api_key" class="form-label fw-bold">
+                            <i class="fas fa-key text-primary me-2"></i>Together AI API Key
+                        </label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
                             <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
                                    value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
                             <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
@@ -25,15 +27,38 @@
                         </div>
                         <div class="form-text mt-2">
                             <i class="fas fa-info-circle me-1"></i>
-                            Required to use the Llama-3.3-70B-Instruct-Turbo-Free model. 
+                            Required to use the AI models. 
                             Get your API key from <a href="https://together.ai" target="_blank" class="text-decoration-none">Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>.
                         </div>
                     </div>
                     
                     <div class="mb-4">
-                        <label for="github_token" class="form-label fw-bold">GitHub Token</label>
+                        <label for="model_name" class="form-label fw-bold">
+                            <i class="fas fa-brain text-primary me-2"></i>AI Model
+                        </label>
+                        <select class="form-select" id="model_name" name="model_name">
+                            <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" {{ 'selected' if model_name == 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' else '' }}>
+                                Llama-3.3-70B-Instruct-Turbo-Free (Recommended)
+                            </option>
+                            <option value="meta-llama/Llama-3.1-8B-Instruct" {{ 'selected' if model_name == 'meta-llama/Llama-3.1-8B-Instruct' else '' }}>
+                                Llama-3.1-8B-Instruct (Faster)
+                            </option>
+                            <option value="mistralai/Mixtral-8x7B-Instruct-v0.1" {{ 'selected' if model_name == 'mistralai/Mixtral-8x7B-Instruct-v0.1' else '' }}>
+                                Mixtral-8x7B-Instruct-v0.1
+                            </option>
+                        </select>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Select the AI model to use for chat. Llama-3.3-70B offers the best quality responses.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="github_token" class="form-label fw-bold">
+                            <i class="fab fa-github text-primary me-2"></i>GitHub Token
+                        </label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fab fa-github"></i></span>
+                            <span class="input-group-text bg-light"><i class="fab fa-github"></i></span>
                             <input type="password" class="form-control" id="github_token" name="github_token" 
                                    value="{{ github_token }}" placeholder="Enter your GitHub token">
                             <button class="btn btn-outline-secondary" type="button" id="toggle-github-token">
@@ -42,8 +67,43 @@
                         </div>
                         <div class="form-text mt-2">
                             <i class="fas fa-info-circle me-1"></i>
-                            Required for GitHub integration. Create a token with appropriate permissions from 
+                            Required for GitHub repository integration. Create a token with <code>repo</code> scope from 
                             <a href="https://github.com/settings/tokens" target="_blank" class="text-decoration-none">GitHub <i class="fas fa-external-link-alt fa-xs"></i></a>.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-sliders-h text-primary me-2"></i>Advanced Settings
+                        </label>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="temperature" class="form-label">Temperature</label>
+                                    <input type="range" class="form-range" min="0" max="1" step="0.1" id="temperature" name="temperature" 
+                                           value="{{ temperature|default(0.7) }}">
+                                    <div class="d-flex justify-content-between">
+                                        <small>More Focused (0)</small>
+                                        <small id="temp-value">{{ temperature|default(0.7) }}</small>
+                                        <small>More Creative (1)</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="max_tokens" class="form-label">Max Response Length</label>
+                                    <input type="number" class="form-control" id="max_tokens" name="max_tokens" 
+                                           value="{{ max_tokens|default(2048) }}" min="256" max="4096">
+                                    <div class="form-text">
+                                        Maximum number of tokens in the AI's response (256-4096).
+                                    </div>
+                                </div>
+                                
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="streaming" name="streaming" 
+                                           {{ 'checked' if streaming|default(true) else '' }}>
+                                    <label class="form-check-label" for="streaming">Enable streaming responses</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -65,24 +125,32 @@
         <div class="card shadow-custom mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i> Token Usage
+                    <i class="fas fa-tachometer-alt me-2"></i> Token Usage
                 </h5>
             </div>
             <div class="card-body">
-                <div id="token-usage-container" class="token-usage">
-                    <div class="token-usage-title">Current Usage</div>
+                <div id="token-usage" class="token-usage">
+                    <div class="token-usage-title">
+                        <i class="fas fa-microchip"></i> Current Usage
+                    </div>
                     <div class="token-usage-stats">
                         <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Prompt</div>
+                            <span class="token-label">
+                                <i class="fas fa-arrow-right text-primary"></i> Prompt tokens:
+                            </span>
+                            <span class="token-value">0</span>
                         </div>
                         <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Completion</div>
+                            <span class="token-label">
+                                <i class="fas fa-arrow-left text-success"></i> Completion tokens:
+                            </span>
+                            <span class="token-value">0</span>
                         </div>
-                        <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Total</div>
+                        <div class="token-stat total">
+                            <span class="token-label">
+                                <i class="fas fa-calculator"></i> Total tokens:
+                            </span>
+                            <span class="token-value">0</span>
                         </div>
                     </div>
                 </div>
@@ -97,15 +165,43 @@
                 </h5>
             </div>
             <div class="card-body">
-                <div id="agent-status-container" class="agent-status mb-3">
-                    <div class="status-indicator warning"></div>
-                    <div class="status-text">Checking status...</div>
+                <div class="agent-status-display mb-3">
+                    <div class="agent-status-dot" id="agent-status-dot"></div>
+                    <div class="agent-status-text" id="agent-status-text">Checking status...</div>
                 </div>
                 
                 <div class="d-grid">
                     <button class="btn btn-outline-primary" id="refresh-status">
                         <i class="fas fa-sync-alt me-2"></i> Refresh Status
                     </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- GitHub Info Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fab fa-github me-2"></i> GitHub Integration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="github-status" class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-circle text-muted me-2" style="font-size: 10px;"></i>
+                        <span>Status: <span id="github-connection-status">Not connected</span></span>
+                    </div>
+                    <div id="repo-info-settings" class="d-none">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span>Connected to GitHub</span>
+                        </div>
+                        <div class="d-grid mt-2">
+                            <button class="btn btn-sm btn-outline-primary" id="select-repo-btn" data-bs-toggle="modal" data-bs-target="#repo-modal">
+                                <i class="fas fa-code-branch me-2"></i> Select Repository
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -116,17 +212,32 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const tokenUsageContainer = document.getElementById('token-usage-container');
-        const agentStatusContainer = document.getElementById('agent-status-container');
+        const tokenUsage = document.getElementById('token-usage');
+        const agentStatusDot = document.getElementById('agent-status-dot');
+        const agentStatusText = document.getElementById('agent-status-text');
         const refreshStatusBtn = document.getElementById('refresh-status');
         const settingsForm = document.getElementById('settings-form');
         const saveButton = document.getElementById('save-button');
+        const temperatureSlider = document.getElementById('temperature');
+        const tempValue = document.getElementById('temp-value');
+        const githubConnectionStatus = document.getElementById('github-connection-status');
+        const repoInfoSettings = document.getElementById('repo-info-settings');
         
         // Initialize token usage display
         updateTokenUsage();
         
         // Initialize agent status
         updateAgentStatus();
+        
+        // Initialize GitHub status
+        checkGitHubConnection();
+        
+        // Update temperature value display
+        if (temperatureSlider && tempValue) {
+            temperatureSlider.addEventListener('input', function() {
+                tempValue.textContent = this.value;
+            });
+        }
         
         // Toggle password visibility for API key
         document.getElementById('toggle-api-key').addEventListener('click', function() {
@@ -191,20 +302,28 @@
                 .then(data => {
                     if (data.success && data.token_usage) {
                         const usage = data.token_usage;
-                        tokenUsageContainer.innerHTML = `
-                            <div class="token-usage-title">Current Usage</div>
+                        tokenUsage.innerHTML = `
+                            <div class="token-usage-title">
+                                <i class="fas fa-microchip"></i> Current Usage
+                            </div>
                             <div class="token-usage-stats">
                                 <div class="token-stat">
-                                    <div class="token-value">${usage.prompt_tokens.toLocaleString()}</div>
-                                    <div class="token-label">Prompt</div>
+                                    <span class="token-label">
+                                        <i class="fas fa-arrow-right text-primary"></i> Prompt tokens:
+                                    </span>
+                                    <span class="token-value">${usage.prompt_tokens.toLocaleString()}</span>
                                 </div>
                                 <div class="token-stat">
-                                    <div class="token-value">${usage.completion_tokens.toLocaleString()}</div>
-                                    <div class="token-label">Completion</div>
+                                    <span class="token-label">
+                                        <i class="fas fa-arrow-left text-success"></i> Completion tokens:
+                                    </span>
+                                    <span class="token-value">${usage.completion_tokens.toLocaleString()}</span>
                                 </div>
-                                <div class="token-stat">
-                                    <div class="token-value">${usage.total_tokens.toLocaleString()}</div>
-                                    <div class="token-label">Total</div>
+                                <div class="token-stat total">
+                                    <span class="token-label">
+                                        <i class="fas fa-calculator"></i> Total tokens:
+                                    </span>
+                                    <span class="token-value">${usage.total_tokens.toLocaleString()}</span>
                                 </div>
                             </div>
                         `;
@@ -217,33 +336,70 @@
         
         // Function to update agent status
         function updateAgentStatus() {
-            return fetch('/api/agent-status')
+            return fetch('/api/agent-status?force_check=true')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.status) {
                         const status = data.status;
-                        let statusClass = status.ready ? 'ready' : 'warning';
-                        let statusText = status.ready ? 'Agent Ready' : 'Agent Not Ready';
                         
-                        if (!status.api_key_set) {
-                            statusClass = 'error';
-                            statusText = 'API Key Missing';
+                        // Update agent status display
+                        if (status.ready) {
+                            agentStatusDot.className = 'agent-status-dot ready';
+                            agentStatusText.textContent = 'Agent is ready';
+                        } else if (!status.api_key_set) {
+                            agentStatusDot.className = 'agent-status-dot error';
+                            agentStatusText.textContent = 'API Key Missing';
                         } else if (!status.initialized) {
-                            statusText = 'Initializing...';
+                            agentStatusDot.className = 'agent-status-dot';
+                            agentStatusText.textContent = 'Initializing...';
+                        } else {
+                            agentStatusDot.className = 'agent-status-dot error';
+                            agentStatusText.textContent = 'Agent is not ready';
                         }
                         
-                        agentStatusContainer.innerHTML = `
-                            <div class="status-indicator ${statusClass}"></div>
-                            <div class="status-text">${statusText}</div>
-                        `;
+                        // Update token usage display
+                        if (status.token_usage) {
+                            updateTokenUsage();
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching agent status:', error);
-                    agentStatusContainer.innerHTML = `
-                        <div class="status-indicator error"></div>
-                        <div class="status-text">Connection Error</div>
-                    `;
+                    agentStatusDot.className = 'agent-status-dot error';
+                    agentStatusText.textContent = 'Connection Error';
+                });
+        }
+        
+        // Function to check GitHub connection
+        function checkGitHubConnection() {
+            const githubToken = document.getElementById('github_token').value;
+            
+            if (!githubToken) {
+                githubConnectionStatus.textContent = 'Not connected';
+                githubConnectionStatus.className = 'text-muted';
+                repoInfoSettings.classList.add('d-none');
+                return;
+            }
+            
+            // Try to get current repo to check connection
+            fetch('/api/github/current-repo')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        githubConnectionStatus.textContent = 'Invalid token';
+                        githubConnectionStatus.className = 'text-danger';
+                        repoInfoSettings.classList.add('d-none');
+                    } else {
+                        githubConnectionStatus.textContent = 'Connected';
+                        githubConnectionStatus.className = 'text-success';
+                        repoInfoSettings.classList.remove('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking GitHub connection:', error);
+                    githubConnectionStatus.textContent = 'Connection error';
+                    githubConnectionStatus.className = 'text-danger';
+                    repoInfoSettings.classList.add('d-none');
                 });
         }
     });
