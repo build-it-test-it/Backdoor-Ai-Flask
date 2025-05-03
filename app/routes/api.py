@@ -450,3 +450,41 @@ def finish():
     result = tool_registry.execute_tool('finish', message=message, task_completed=task_completed)
     
     return jsonify(result)
+
+@bp.route('/token-usage', methods=['GET'])
+def token_usage():
+    """Get the current token usage."""
+    from app.ai.model_service import model_service
+    
+    # Get token usage from model service
+    usage = model_service.get_token_usage()
+    
+    return jsonify({
+        'success': True,
+        'token_usage': usage
+    })
+
+@bp.route('/agent-status', methods=['GET'])
+def agent_status():
+    """Check if the agent is ready."""
+    from app.ai.model_service import model_service
+    
+    # Check if API key is set
+    api_key = model_service.get_api_key()
+    
+    # Check if OpenHands is initialized
+    initialized_file = os.path.join(current_app.config['OPENHANDS_CONFIG_DIR'], 'initialized')
+    is_initialized = os.path.exists(initialized_file)
+    
+    # Get token usage
+    usage = model_service.get_token_usage()
+    
+    return jsonify({
+        'success': True,
+        'status': {
+            'ready': bool(api_key) and is_initialized,
+            'api_key_set': bool(api_key),
+            'initialized': is_initialized,
+            'token_usage': usage
+        }
+    })

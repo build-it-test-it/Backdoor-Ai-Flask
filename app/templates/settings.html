@@ -4,54 +4,109 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 offset-md-2">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
+    <div class="col-lg-8">
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-gear"></i> Settings
+                    <i class="fas fa-cog me-2"></i> API Settings
                 </h5>
             </div>
             <div class="card-body">
-                <form method="post">
-                    <div class="mb-3">
-                        <label for="together_api_key" class="form-label">Together AI API Key</label>
+                <form method="post" id="settings-form">
+                    <div class="mb-4">
+                        <label for="together_api_key" class="form-label fw-bold">Together AI API Key</label>
                         <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
                             <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
                                    value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
                             <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
-                                <i class="bi bi-eye"></i>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
-                        <div class="form-text">
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
                             Required to use the Llama-3.3-70B-Instruct-Turbo-Free model. 
-                            Get your API key from <a href="https://together.ai" target="_blank">Together AI</a>.
+                            Get your API key from <a href="https://together.ai" target="_blank" class="text-decoration-none">Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>.
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="github_token" class="form-label">GitHub Token</label>
+                    <div class="mb-4">
+                        <label for="github_token" class="form-label fw-bold">GitHub Token</label>
                         <div class="input-group">
+                            <span class="input-group-text"><i class="fab fa-github"></i></span>
                             <input type="password" class="form-control" id="github_token" name="github_token" 
                                    value="{{ github_token }}" placeholder="Enter your GitHub token">
                             <button class="btn btn-outline-secondary" type="button" id="toggle-github-token">
-                                <i class="bi bi-eye"></i>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
-                        <div class="form-text">
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
                             Required for GitHub integration. Create a token with appropriate permissions from 
-                            <a href="https://github.com/settings/tokens" target="_blank">GitHub</a>.
+                            <a href="https://github.com/settings/tokens" target="_blank" class="text-decoration-none">GitHub <i class="fas fa-external-link-alt fa-xs"></i></a>.
                         </div>
                     </div>
                     
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Save Settings
+                        <button type="submit" class="btn btn-primary" id="save-button">
+                            <i class="fas fa-save me-2"></i> Save Settings
                         </button>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to Chat
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Chat
                         </a>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Token Usage Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i> Token Usage
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="token-usage-container" class="token-usage">
+                    <div class="token-usage-title">Current Usage</div>
+                    <div class="token-usage-stats">
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Prompt</div>
+                        </div>
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Completion</div>
+                        </div>
+                        <div class="token-stat">
+                            <div class="token-value">0</div>
+                            <div class="token-label">Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agent Status Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i> Agent Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="agent-status-container" class="agent-status mb-3">
+                    <div class="status-indicator warning"></div>
+                    <div class="status-text">Checking status...</div>
+                </div>
+                
+                <div class="d-grid">
+                    <button class="btn btn-outline-primary" id="refresh-status">
+                        <i class="fas fa-sync-alt me-2"></i> Refresh Status
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -60,34 +115,136 @@
 
 {% block scripts %}
 <script>
-    // Toggle password visibility
-    document.getElementById('toggle-api-key').addEventListener('click', function() {
-        const input = document.getElementById('together_api_key');
-        const icon = this.querySelector('i');
+    document.addEventListener('DOMContentLoaded', function() {
+        const tokenUsageContainer = document.getElementById('token-usage-container');
+        const agentStatusContainer = document.getElementById('agent-status-container');
+        const refreshStatusBtn = document.getElementById('refresh-status');
+        const settingsForm = document.getElementById('settings-form');
+        const saveButton = document.getElementById('save-button');
         
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
+        // Initialize token usage display
+        updateTokenUsage();
+        
+        // Initialize agent status
+        updateAgentStatus();
+        
+        // Toggle password visibility for API key
+        document.getElementById('toggle-api-key').addEventListener('click', function() {
+            const input = document.getElementById('together_api_key');
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+        
+        // Toggle password visibility for GitHub token
+        document.getElementById('toggle-github-token').addEventListener('click', function() {
+            const input = document.getElementById('github_token');
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+        
+        // Refresh status button
+        refreshStatusBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Refreshing...';
+            
+            // Update agent status
+            updateAgentStatus().then(() => {
+                // Update token usage
+                return updateTokenUsage();
+            }).finally(() => {
+                // Re-enable button
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-sync-alt me-2"></i> Refresh Status';
+            });
+        });
+        
+        // Handle form submission with loading state
+        if (settingsForm) {
+            settingsForm.addEventListener('submit', function() {
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Saving...';
+            });
         }
-    });
-    
-    document.getElementById('toggle-github-token').addEventListener('click', function() {
-        const input = document.getElementById('github_token');
-        const icon = this.querySelector('i');
         
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
+        // Function to update token usage display
+        function updateTokenUsage() {
+            return fetch('/api/token-usage')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.token_usage) {
+                        const usage = data.token_usage;
+                        tokenUsageContainer.innerHTML = `
+                            <div class="token-usage-title">Current Usage</div>
+                            <div class="token-usage-stats">
+                                <div class="token-stat">
+                                    <div class="token-value">${usage.prompt_tokens.toLocaleString()}</div>
+                                    <div class="token-label">Prompt</div>
+                                </div>
+                                <div class="token-stat">
+                                    <div class="token-value">${usage.completion_tokens.toLocaleString()}</div>
+                                    <div class="token-label">Completion</div>
+                                </div>
+                                <div class="token-stat">
+                                    <div class="token-value">${usage.total_tokens.toLocaleString()}</div>
+                                    <div class="token-label">Total</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching token usage:', error);
+                });
+        }
+        
+        // Function to update agent status
+        function updateAgentStatus() {
+            return fetch('/api/agent-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.status) {
+                        const status = data.status;
+                        let statusClass = status.ready ? 'ready' : 'warning';
+                        let statusText = status.ready ? 'Agent Ready' : 'Agent Not Ready';
+                        
+                        if (!status.api_key_set) {
+                            statusClass = 'error';
+                            statusText = 'API Key Missing';
+                        } else if (!status.initialized) {
+                            statusText = 'Initializing...';
+                        }
+                        
+                        agentStatusContainer.innerHTML = `
+                            <div class="status-indicator ${statusClass}"></div>
+                            <div class="status-text">${statusText}</div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching agent status:', error);
+                    agentStatusContainer.innerHTML = `
+                        <div class="status-indicator error"></div>
+                        <div class="status-text">Connection Error</div>
+                    `;
+                });
         }
     });
 </script>
