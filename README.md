@@ -1,4 +1,4 @@
-# Backdoor AI Flask Application
+# Backdoor AI Flask Application with OpenHands Integration
 
 A Flask-based web application that integrates with the meta-llama/Llama-3.3-70B-Instruct-Turbo-Free model from Together AI and leverages the open-source All-Hands-AI/OpenHands repository for AI-driven software development capabilities.
 
@@ -9,6 +9,16 @@ A Flask-based web application that integrates with the meta-llama/Llama-3.3-70B-
 - **Chat History**: Save and download chat conversations
 - **Settings Management**: Configure API keys and tokens
 - **Responsive Design**: Works on desktop and mobile devices
+
+## OpenHands Integration Features
+
+- **Function Calling**: Execute tools and functions directly from the AI chat
+- **File Operations**: View, create, and edit files through the AI interface
+- **Bash Command Execution**: Run terminal commands and view results
+- **Python Code Execution**: Run Python code in an IPython environment
+- **Web Browsing**: Read content from webpages and interact with web browsers
+- **Thought Process**: Log AI thoughts for complex reasoning
+- **Task Completion**: Signal when tasks are completed with summaries
 
 ## Prerequisites
 
@@ -41,6 +51,11 @@ A Flask-based web application that integrates with the meta-llama/Llama-3.3-70B-
 - `SECRET_KEY`: Flask secret key for session security
 - `TOGETHER_API_KEY`: Your Together AI API key
 - `GITHUB_TOKEN`: Your GitHub personal access token
+- `OPENHANDS_ENV`: Environment type (development, production)
+- `OPENHANDS_LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `OPENHANDS_DISABLE_TOOLS`: Comma-separated list of tools to disable
+- `OPENHANDS_ENABLE_TOOLS`: Comma-separated list of tools to enable
+- `OPENHANDS_TOOL_TIMEOUT`: Timeout in seconds for tool execution (default: 120)
 
 ## Deployment on Render.com
 

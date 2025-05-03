@@ -5,8 +5,38 @@ import uuid
 from datetime import datetime
 import zipfile
 import io
+import platform
+import sys
 
 bp = Blueprint('main', __name__)
+
+# Initialize the OpenHands environment
+def init_openhands_env():
+    """Initialize the OpenHands environment variables and settings."""
+    os.environ['OPENHANDS_VERSION'] = '2.0.0'
+    os.environ['OPENHANDS_ENV'] = 'production'
+    os.environ['OPENHANDS_PLATFORM'] = platform.system()
+    os.environ['OPENHANDS_PYTHON_VERSION'] = platform.python_version()
+    os.environ['OPENHANDS_SYSTEM_VERSION'] = platform.version()
+    os.environ['OPENHANDS_MACHINE'] = platform.machine()
+    os.environ['OPENHANDS_NODE'] = platform.node()
+    os.environ['OPENHANDS_RELEASE'] = platform.release()
+    os.environ['OPENHANDS_PROCESSOR'] = platform.processor()
+    
+    # Create necessary directories
+    os.makedirs('/tmp/openhands', exist_ok=True)
+    os.makedirs('/tmp/openhands/tools', exist_ok=True)
+    os.makedirs('/tmp/openhands/cache', exist_ok=True)
+    os.makedirs('/tmp/openhands/logs', exist_ok=True)
+    
+    # Create a marker file to indicate OpenHands is initialized
+    with open('/tmp/openhands/initialized', 'w') as f:
+        f.write(f"OpenHands initialized at {datetime.now().isoformat()}")
+    
+    return True
+
+# Initialize OpenHands environment
+init_openhands_env()
 
 @bp.route('/')
 def index():
