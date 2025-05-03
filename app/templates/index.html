@@ -13,11 +13,12 @@
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-comment-dots me-2"></i> Chat with Backdoor AI
+                        <i class="fas fa-comments me-2"></i> Chat with Backdoor AI
                     </h5>
-                    <div id="agent-status-container" class="agent-status">
-                        <div class="status-indicator warning"></div>
-                        <div class="status-text">Checking status...</div>
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-primary me-2">
+                            <i class="fas fa-brain me-1"></i> Llama-3.3-70B
+                        </div>
                     </div>
                 </div>
             </div>
@@ -30,19 +31,26 @@
                 
                 <div class="chat-container">
                     <div class="chat-messages" id="chat-messages">
-                        <div class="typing-indicator" id="typing-indicator">
-                            <span class="typing-dot"></span>
-                            <span class="typing-dot"></span>
-                            <span class="typing-dot"></span>
-                        </div>
+                        <!-- Messages will be added here dynamically -->
+                    </div>
+                    
+                    <div id="typing-indicator-main" class="typing-indicator d-none">
+                        <i class="fas fa-robot me-2"></i>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
                     </div>
                     
                     <div class="chat-input">
-                        <form id="chat-form">
+                        <form id="chat-form" class="w-100">
                             <div class="input-group">
-                                <input type="text" id="user-input" class="form-control" placeholder="Type your message..." required>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-paper-plane"></i> Send
+                                <span class="input-group-text bg-transparent border-end-0">
+                                    <i class="fas fa-keyboard text-muted"></i>
+                                </span>
+                                <input type="text" id="user-input" class="form-control border-start-0" 
+                                       placeholder="Ask me anything..." required autocomplete="off">
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="fas fa-paper-plane"></i>
                                 </button>
                             </div>
                         </form>
@@ -57,24 +65,54 @@
         <div class="card shadow-custom mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i> Usage Stats
+                    <i class="fas fa-tachometer-alt me-2"></i> Usage Stats
                 </h5>
             </div>
             <div class="card-body">
-                <div id="token-usage-container" class="token-usage">
-                    <div class="token-usage-title">Token Usage</div>
+                <div id="token-usage" class="token-usage">
+                    <div class="token-usage-title">
+                        <i class="fas fa-microchip"></i> Token Usage
+                    </div>
                     <div class="token-usage-stats">
                         <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Prompt</div>
+                            <span class="token-label">
+                                <i class="fas fa-arrow-right text-primary"></i> Prompt tokens:
+                            </span>
+                            <span class="token-value">0</span>
                         </div>
                         <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Completion</div>
+                            <span class="token-label">
+                                <i class="fas fa-arrow-left text-success"></i> Completion tokens:
+                            </span>
+                            <span class="token-value">0</span>
                         </div>
-                        <div class="token-stat">
-                            <div class="token-value">0</div>
-                            <div class="token-label">Total</div>
+                        <div class="token-stat total">
+                            <span class="token-label">
+                                <i class="fas fa-calculator"></i> Total tokens:
+                            </span>
+                            <span class="token-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Repository Info -->
+                <div id="repo-info" class="repo-info mt-3 d-none">
+                    <div class="repo-info-header">
+                        <h5>
+                            <i class="fas fa-code-branch"></i> 
+                            <span id="repo-name">Repository</span>
+                        </h5>
+                    </div>
+                    <p class="text-muted small mb-2" id="repo-description">Repository description</p>
+                    <div class="repo-info-stats">
+                        <div class="repo-info-stat">
+                            <i class="fas fa-star"></i> <span id="repo-stars">0</span>
+                        </div>
+                        <div class="repo-info-stat">
+                            <i class="fas fa-code-branch"></i> <span id="repo-forks">0</span>
+                        </div>
+                        <div class="repo-info-stat">
+                            <i class="fas fa-code"></i> <span id="repo-language">Unknown</span>
                         </div>
                     </div>
                 </div>
@@ -91,14 +129,41 @@
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <button class="btn btn-outline-primary" onclick="clearChat()">
-                        <i class="fas fa-trash-alt me-2"></i> Clear Chat
+                        <i class="fas fa-eraser me-2"></i> Clear Chat
                     </button>
                     <a href="{{ url_for('main.download_chat') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-download me-2"></i> Download Chat
+                        <i class="fas fa-file-download me-2"></i> Download Chat
                     </a>
                     <a href="{{ url_for('main.settings') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-cog me-2"></i> Settings
+                        <i class="fas fa-sliders-h me-2"></i> Settings
                     </a>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#repo-modal">
+                        <i class="fas fa-code-branch me-2"></i> Select Repository
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agent Status Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i> Agent Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="agent-status-display">
+                    <div class="agent-status-dot" id="agent-status-dot"></div>
+                    <div class="agent-status-text" id="agent-status-text">Checking status...</div>
+                </div>
+                
+                <div id="typing-indicator" class="typing-indicator mt-3 d-none">
+                    <i class="fas fa-keyboard me-2"></i> Agent is thinking
+                    <div class="ms-2">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -118,10 +183,11 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
-    const typingIndicator = document.getElementById('typing-indicator');
+    const typingIndicator = document.getElementById('typing-indicator-main');
     const apiKeyWarning = document.querySelector('.api-key-warning');
-    const tokenUsageContainer = document.getElementById('token-usage-container');
-    const agentStatusContainer = document.getElementById('agent-status-container');
+    const tokenUsage = document.getElementById('token-usage');
+    const agentStatusDot = document.getElementById('agent-status-dot');
+    const agentStatusText = document.getElementById('agent-status-text');
     
     // Check if API key is set
     if (!apiKey) {
@@ -145,16 +211,27 @@
     // Add a message to the UI
     function addMessageToUI(role, content, timestamp) {
         const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', 'p-3', 'mb-3');
+        messageDiv.classList.add('message');
         
         if (role === 'user') {
-            messageDiv.classList.add('user-message');
+            messageDiv.classList.add('message-user');
         } else if (role === 'assistant') {
-            messageDiv.classList.add('assistant-message');
+            messageDiv.classList.add('message-assistant');
+        } else if (role === 'system') {
+            messageDiv.classList.add('message-system');
         }
         
         // Create content container
         const contentDiv = document.createElement('div');
+        contentDiv.classList.add('message-content');
+        
+        // Add icon for assistant messages
+        if (role === 'assistant') {
+            const iconSpan = document.createElement('span');
+            iconSpan.classList.add('message-icon');
+            iconSpan.innerHTML = '<i class="fas fa-robot text-primary"></i>';
+            messageDiv.appendChild(iconSpan);
+        }
         
         // Format content with markdown for assistant messages
         if (role === 'assistant') {
@@ -169,13 +246,13 @@
         // Add timestamp if available
         if (timestamp) {
             const timeDiv = document.createElement('div');
-            timeDiv.classList.add('message-time', 'text-muted', 'small');
+            timeDiv.classList.add('message-time');
             timeDiv.textContent = timestamp;
             messageDiv.appendChild(timeDiv);
         }
         
-        // Insert before typing indicator
-        chatMessages.insertBefore(messageDiv, typingIndicator);
+        // Add to chat messages
+        chatMessages.appendChild(messageDiv);
         
         // Apply syntax highlighting to code blocks
         if (role === 'assistant') {
@@ -195,13 +272,28 @@
     
     // Show typing indicator
     function showTypingIndicator() {
-        typingIndicator.style.display = 'block';
+        // Show main typing indicator
+        typingIndicator.classList.remove('d-none');
+        
+        // Show sidebar typing indicator
+        const sidebarTypingIndicator = document.getElementById('typing-indicator');
+        if (sidebarTypingIndicator) {
+            sidebarTypingIndicator.classList.remove('d-none');
+        }
+        
         scrollToBottom();
     }
     
     // Hide typing indicator
     function hideTypingIndicator() {
-        typingIndicator.style.display = 'none';
+        // Hide main typing indicator
+        typingIndicator.classList.add('d-none');
+        
+        // Hide sidebar typing indicator
+        const sidebarTypingIndicator = document.getElementById('typing-indicator');
+        if (sidebarTypingIndicator) {
+            sidebarTypingIndicator.classList.add('d-none');
+        }
     }
     
     // Send message to API
@@ -267,20 +359,28 @@
             .then(data => {
                 if (data.success && data.token_usage) {
                     const usage = data.token_usage;
-                    tokenUsageContainer.innerHTML = `
-                        <div class="token-usage-title">Token Usage</div>
+                    tokenUsage.innerHTML = `
+                        <div class="token-usage-title">
+                            <i class="fas fa-microchip"></i> Token Usage
+                        </div>
                         <div class="token-usage-stats">
                             <div class="token-stat">
-                                <div class="token-value">${usage.prompt_tokens.toLocaleString()}</div>
-                                <div class="token-label">Prompt</div>
+                                <span class="token-label">
+                                    <i class="fas fa-arrow-right text-primary"></i> Prompt tokens:
+                                </span>
+                                <span class="token-value">${usage.prompt_tokens.toLocaleString()}</span>
                             </div>
                             <div class="token-stat">
-                                <div class="token-value">${usage.completion_tokens.toLocaleString()}</div>
-                                <div class="token-label">Completion</div>
+                                <span class="token-label">
+                                    <i class="fas fa-arrow-left text-success"></i> Completion tokens:
+                                </span>
+                                <span class="token-value">${usage.completion_tokens.toLocaleString()}</span>
                             </div>
-                            <div class="token-stat">
-                                <div class="token-value">${usage.total_tokens.toLocaleString()}</div>
-                                <div class="token-label">Total</div>
+                            <div class="token-stat total">
+                                <span class="token-label">
+                                    <i class="fas fa-calculator"></i> Total tokens:
+                                </span>
+                                <span class="token-value">${usage.total_tokens.toLocaleString()}</span>
                             </div>
                         </div>
                     `;
@@ -298,28 +398,67 @@
             .then(data => {
                 if (data.success && data.status) {
                     const status = data.status;
-                    let statusClass = status.ready ? 'ready' : 'warning';
-                    let statusText = status.ready ? 'Agent Ready' : 'Agent Not Ready';
                     
-                    if (!status.api_key_set) {
-                        statusClass = 'error';
-                        statusText = 'API Key Missing';
-                    } else if (!status.initialized) {
-                        statusText = 'Initializing...';
+                    // Update status indicator in navbar
+                    const navbarStatus = document.getElementById('agent-status');
+                    if (navbarStatus) {
+                        if (status.ready) {
+                            navbarStatus.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Ready</span>';
+                        } else if (!status.api_key_set) {
+                            navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i>API Key Missing</span>';
+                        } else if (!status.initialized) {
+                            navbarStatus.innerHTML = '<span class="badge bg-warning"><i class="fas fa-sync fa-spin me-1"></i>Initializing</span>';
+                        } else {
+                            navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Not Ready</span>';
+                        }
                     }
                     
-                    agentStatusContainer.innerHTML = `
-                        <div class="status-indicator ${statusClass}"></div>
-                        <div class="status-text">${statusText}</div>
-                    `;
+                    // Update status in sidebar
+                    if (agentStatusDot && agentStatusText) {
+                        if (status.ready) {
+                            agentStatusDot.className = 'agent-status-dot ready';
+                            agentStatusText.textContent = 'Agent is ready';
+                            
+                            // Hide typing indicator in sidebar when not actively processing
+                            const sidebarTypingIndicator = document.getElementById('typing-indicator');
+                            if (sidebarTypingIndicator) {
+                                sidebarTypingIndicator.classList.add('d-none');
+                            }
+                        } else if (!status.api_key_set) {
+                            agentStatusDot.className = 'agent-status-dot error';
+                            agentStatusText.textContent = 'API Key Missing';
+                        } else if (!status.initialized) {
+                            agentStatusDot.className = 'agent-status-dot';
+                            agentStatusText.textContent = 'Initializing...';
+                        } else {
+                            agentStatusDot.className = 'agent-status-dot error';
+                            agentStatusText.textContent = 'Agent is not ready';
+                        }
+                    }
+                    
+                    // Update token usage display
+                    if (status.token_usage) {
+                        const usage = status.token_usage;
+                        const tokenValues = document.querySelectorAll('.token-value');
+                        if (tokenValues.length >= 3) {
+                            tokenValues[0].textContent = usage.prompt_tokens.toLocaleString();
+                            tokenValues[1].textContent = usage.completion_tokens.toLocaleString();
+                            tokenValues[2].textContent = usage.total_tokens.toLocaleString();
+                        }
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error fetching agent status:', error);
-                agentStatusContainer.innerHTML = `
-                    <div class="status-indicator error"></div>
-                    <div class="status-text">Connection Error</div>
-                `;
+                if (agentStatusDot && agentStatusText) {
+                    agentStatusDot.className = 'agent-status-dot error';
+                    agentStatusText.textContent = 'Connection Error';
+                }
+                
+                const navbarStatus = document.getElementById('agent-status');
+                if (navbarStatus) {
+                    navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Connection Error</span>';
+                }
             });
     }
     

@@ -80,6 +80,8 @@ def chat():
 
 @bp.route('/github', methods=['POST'])
 def github():
+    from app.ai.github_service import github_service
+    
     data = request.json
     
     # Get GitHub token from session or request
@@ -88,6 +90,9 @@ def github():
         return jsonify({
             'error': 'GitHub token is required. Please set it in the settings.'
         }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
     
     # Get the GitHub API endpoint
     endpoint = data.get('endpoint')
@@ -133,6 +138,269 @@ def github():
         return jsonify({
             'error': f"Error: {str(e)}"
         }), 500
+
+@bp.route('/github/repos', methods=['GET'])
+def github_repos():
+    """Get repositories for the authenticated user."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Force refresh if requested
+    force_refresh = request.args.get('force_refresh', 'false').lower() == 'true'
+    
+    # Get repositories
+    repos = github_service.get_user_repos(force_refresh=force_refresh)
+    
+    if isinstance(repos, dict) and "error" in repos:
+        return jsonify({
+            'error': repos["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'repositories': repos
+    })
+
+@bp.route('/github/org-repos/<org>', methods=['GET'])
+def github_org_repos(org):
+    """Get repositories for an organization."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Force refresh if requested
+    force_refresh = request.args.get('force_refresh', 'false').lower() == 'true'
+    
+    # Get repositories
+    repos = github_service.get_org_repos(org, force_refresh=force_refresh)
+    
+    if isinstance(repos, dict) and "error" in repos:
+        return jsonify({
+            'error': repos["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'repositories': repos
+    })
+
+@bp.route('/github/search-repos', methods=['GET'])
+def github_search_repos():
+    """Search for repositories."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Get search query
+    query = request.args.get('q')
+    if not query:
+        return jsonify({
+            'error': 'Search query is required.'
+        }), 400
+    
+    # Get sort and order parameters
+    sort = request.args.get('sort', 'updated')
+    order = request.args.get('order', 'desc')
+    
+    # Search repositories
+    result = github_service.search_repositories(query, sort, order)
+    
+    if isinstance(result, dict) and "error" in result:
+        return jsonify({
+            'error': result["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'search_results': result
+    })
+
+@bp.route('/github/set-repo', methods=['POST'])
+def github_set_repo():
+    """Set the current repository."""
+    from app.ai.github_service import github_service
+    
+    data = request.json
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Get repository full name
+    repo_full_name = data.get('repo_full_name')
+    if not repo_full_name:
+        return jsonify({
+            'error': 'Repository full name is required.'
+        }), 400
+    
+    # Set the current repository
+    github_service.set_current_repo(repo_full_name)
+    
+    # Get repository info
+    repo_info = github_service.get_repo_info(repo_full_name)
+    
+    if isinstance(repo_info, dict) and "error" in repo_info:
+        return jsonify({
+            'error': repo_info["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'message': f'Current repository set to {repo_full_name}',
+        'repository': repo_info
+    })
+
+@bp.route('/github/current-repo', methods=['GET'])
+def github_current_repo():
+    """Get the current repository."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Get the current repository
+    repo_full_name = github_service.get_current_repo()
+    if not repo_full_name:
+        return jsonify({
+            'success': True,
+            'has_repo': False,
+            'message': 'No repository selected.'
+        })
+    
+    # Get repository info
+    repo_info = github_service.get_repo_info(repo_full_name)
+    
+    if isinstance(repo_info, dict) and "error" in repo_info:
+        return jsonify({
+            'error': repo_info["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'has_repo': True,
+        'repository': repo_info
+    })
+
+@bp.route('/github/repo-contents', methods=['GET'])
+def github_repo_contents():
+    """Get contents of a repository at a specific path."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Get repository full name
+    repo_full_name = request.args.get('repo_full_name') or github_service.get_current_repo()
+    if not repo_full_name:
+        return jsonify({
+            'error': 'No repository selected.'
+        }), 400
+    
+    # Get path and ref parameters
+    path = request.args.get('path', '')
+    ref = request.args.get('ref')
+    
+    # Get repository contents
+    contents = github_service.get_repo_contents(path, repo_full_name, ref)
+    
+    if isinstance(contents, dict) and "error" in contents:
+        return jsonify({
+            'error': contents["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'contents': contents
+    })
+
+@bp.route('/github/file-content', methods=['GET'])
+def github_file_content():
+    """Get the content of a specific file."""
+    from app.ai.github_service import github_service
+    
+    # Get GitHub token from session
+    github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN')
+    if not github_token:
+        return jsonify({
+            'error': 'GitHub token is required. Please set it in the settings.'
+        }), 400
+    
+    # Set the token in the GitHub service
+    github_service.set_token(github_token)
+    
+    # Get repository full name
+    repo_full_name = request.args.get('repo_full_name') or github_service.get_current_repo()
+    if not repo_full_name:
+        return jsonify({
+            'error': 'No repository selected.'
+        }), 400
+    
+    # Get path and ref parameters
+    path = request.args.get('path')
+    if not path:
+        return jsonify({
+            'error': 'File path is required.'
+        }), 400
+    
+    ref = request.args.get('ref')
+    
+    # Get file content
+    content = github_service.get_file_content(path, repo_full_name, ref)
+    
+    if isinstance(content, dict) and "error" in content:
+        return jsonify({
+            'error': content["error"]
+        }), 400
+    
+    return jsonify({
+        'success': True,
+        'content': content
+    })
 
 @bp.route('/feedback', methods=['POST'])
 def feedback():
@@ -221,23 +489,62 @@ def track_behavior():
 
 @bp.route('/settings', methods=['POST'])
 def update_settings():
+    from app.ai.model_service import model_service
+    from app.ai.github_service import github_service
+    
     data = request.json
     
     # Update API keys
     together_api_key = data.get('together_api_key')
     github_token = data.get('github_token')
     
+    # Update model settings
+    model_name = data.get('model_name')
+    temperature = data.get('temperature')
+    max_tokens = data.get('max_tokens')
+    streaming = data.get('streaming')
+    
+    # Update API keys
     if together_api_key is not None:
         current_app.config['TOGETHER_API_KEY'] = together_api_key
         session['together_api_key'] = together_api_key
+        model_service.set_api_key(together_api_key)
     
     if github_token is not None:
         current_app.config['GITHUB_TOKEN'] = github_token
         session['github_token'] = github_token
+        github_service.set_token(github_token)
+    
+    # Update model settings
+    if model_name is not None:
+        model_service.set_model(model_name)
+        session['model_name'] = model_name
+    
+    if temperature is not None:
+        try:
+            temperature = float(temperature)
+            session['temperature'] = temperature
+        except (ValueError, TypeError):
+            pass
+    
+    if max_tokens is not None:
+        try:
+            max_tokens = int(max_tokens)
+            session['max_tokens'] = max_tokens
+        except (ValueError, TypeError):
+            pass
+    
+    if streaming is not None:
+        session['streaming'] = bool(streaming)
+    
+    # Check if the API key is valid
+    if together_api_key is not None:
+        model_service.check_api_key()
     
     return jsonify({
         'success': True,
-        'message': 'Settings updated successfully'
+        'message': 'Settings updated successfully',
+        'status': model_service.get_status()
     })
 
 @bp.route('/execute_bash', methods=['POST'])
@@ -469,22 +776,24 @@ def agent_status():
     """Check if the agent is ready."""
     from app.ai.model_service import model_service
     
-    # Check if API key is set
-    api_key = model_service.get_api_key()
-    
-    # Check if OpenHands is initialized
-    initialized_file = os.path.join(current_app.config['OPENHANDS_CONFIG_DIR'], 'initialized')
-    is_initialized = os.path.exists(initialized_file)
+    # Get agent status from model service
+    status = model_service.get_status()
     
     # Get token usage
     usage = model_service.get_token_usage()
     
+    # Add token usage to status
+    status['token_usage'] = usage
+    
+    # Check if we should force a status check
+    force_check = request.args.get('force_check', 'false').lower() == 'true'
+    if force_check:
+        model_service.check_api_key()
+        # Update status after check
+        status = model_service.get_status()
+        status['token_usage'] = usage
+    
     return jsonify({
         'success': True,
-        'status': {
-            'ready': bool(api_key) and is_initialized,
-            'api_key_set': bool(api_key),
-            'initialized': is_initialized,
-            'token_usage': usage
-        }
+        'status': status
     })
