@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: backdoor-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TOGETHER_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false

@@ -1,0 +1,122 @@
+/* Custom styles for Backdoor AI */
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.footer {
+    margin-top: auto;
+}
+
+/* Chat styles */
+.chat-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Message styling */
+.message {
+    position: relative;
+    word-wrap: break-word;
+}
+
+.user-message {
+    border-top-right-radius: 0 !important;
+}
+
+.assistant-message {
+    border-top-left-radius: 0 !important;
+}
+
+/* Code block styling */
+pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+}
+
+code {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875em;
+}
+
+/* Navbar customization */
+.navbar-brand i {
+    margin-right: 0.5rem;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    font-weight: 500;
+}
+
+/* Button styling */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+/* Form styling */
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 300px);
+    }
+    
+    .message {
+        max-width: 90%;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body.dark-mode {
+        background-color: #212529;
+        color: #f8f9fa;
+    }
+    
+    .dark-mode .card {
+        background-color: #343a40;
+        border-color: #495057;
+    }
+    
+    .dark-mode .chat-messages {
+        background-color: #343a40;
+    }
+    
+    .dark-mode .assistant-message {
+        background-color: #495057;
+        color: #f8f9fa;
+    }
+    
+    .dark-mode pre {
+        background-color: #2b3035;
+        color: #f8f9fa;
+    }
+    
+    .dark-mode .footer {
+        background-color: #343a40 !important;
+    }
+    
+    .dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+}
