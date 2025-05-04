@@ -277,6 +277,14 @@ You can also use legacy command syntax in your responses if needed:
     def extract_commands(response):
         """Extract commands from AI response"""
         import re
+        
+        # Ensure response is a string
+        if response is None:
+            return []
+            
+        if not isinstance(response, str):
+            response = str(response)
+            
         pattern = r'\[([^:]+):([^\]]+)\]'
         commands = []
         
