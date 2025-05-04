@@ -36,7 +36,7 @@ def init_app(app):
         logger.info("PostgreSQL connection string format corrected for SQLAlchemy")
     
     # Configure connection pooling for production environments
-    if app.config['ENV'] == 'production' or os.environ.get('BACKDOOR_ENV') == 'production':
+    if app.config.get('BACKDOOR_ENV') == 'production' or os.environ.get('BACKDOOR_ENV') == 'production':
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'pool_size': 10,  # Maximum number of connections to keep active
             'max_overflow': 15,  # Maximum overflow allowed beyond pool_size
