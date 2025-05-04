@@ -8,48 +8,654 @@
         <div class="card shadow-custom mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-cog me-2"></i> API Settings
+                    <i class="fas fa-cog me-2"></i> LLM Provider Settings
                 </h5>
             </div>
             <div class="card-body">
                 <form method="post" id="settings-form">
+                    <!-- Provider Selection Tabs -->
                     <div class="mb-4">
-                        <label for="together_api_key" class="form-label fw-bold">
-                            <i class="fas fa-key text-primary me-2"></i>Together AI API Key
-                        </label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
-                            <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
-                                   value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
-                            <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <div class="form-text mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Required to use the AI models. 
-                            Get your API key from <a href="https://together.ai" target="_blank" class="text-decoration-none">Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>.
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="model_name" class="form-label fw-bold">
-                            <i class="fas fa-brain text-primary me-2"></i>AI Model
-                        </label>
-                        <select class="form-select" id="model_name" name="model_name">
-                            <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" {{ 'selected' if model_name == 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' else '' }}>
-                                Llama-3.3-70B-Instruct-Turbo-Free (Recommended)
-                            </option>
-                            <option value="meta-llama/Llama-3.1-8B-Instruct" {{ 'selected' if model_name == 'meta-llama/Llama-3.1-8B-Instruct' else '' }}>
-                                Llama-3.1-8B-Instruct (Faster)
-                            </option>
-                            <option value="mistralai/Mixtral-8x7B-Instruct-v0.1" {{ 'selected' if model_name == 'mistralai/Mixtral-8x7B-Instruct-v0.1' else '' }}>
-                                Mixtral-8x7B-Instruct-v0.1
-                            </option>
-                        </select>
-                        <div class="form-text mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Select the AI model to use for chat. Llama-3.3-70B offers the best quality responses.
+                        <ul class="nav nav-tabs" id="provider-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'together' or not llm_provider else '' }}" 
+                                        id="together-tab" data-bs-toggle="tab" data-bs-target="#together-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'together' or not llm_provider else 'false' }}">
+                                    <i class="fas fa-cloud me-1"></i> Together AI
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'openai' else '' }}" 
+                                        id="openai-tab" data-bs-toggle="tab" data-bs-target="#openai-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'openai' else 'false' }}">
+                                    <i class="fas fa-robot me-1"></i> OpenAI
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'anthropic' else '' }}" 
+                                        id="anthropic-tab" data-bs-toggle="tab" data-bs-target="#anthropic-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'anthropic' else 'false' }}">
+                                    <i class="fas fa-atom me-1"></i> Anthropic
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'google' else '' }}" 
+                                        id="google-tab" data-bs-toggle="tab" data-bs-target="#google-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'google' else 'false' }}">
+                                    <i class="fab fa-google me-1"></i> Google
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'mistral' else '' }}" 
+                                        id="mistral-tab" data-bs-toggle="tab" data-bs-target="#mistral-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'mistral' else 'false' }}">
+                                    <i class="fas fa-wind me-1"></i> Mistral
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'cohere' else '' }}" 
+                                        id="cohere-tab" data-bs-toggle="tab" data-bs-target="#cohere-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'cohere' else 'false' }}">
+                                    <i class="fas fa-puzzle-piece me-1"></i> Cohere
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'ollama' else '' }}" 
+                                        id="ollama-tab" data-bs-toggle="tab" data-bs-target="#ollama-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'ollama' else 'false' }}">
+                                    <i class="fas fa-laptop-code me-1"></i> Ollama
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {{ 'active' if llm_provider == 'custom' else '' }}" 
+                                        id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom-panel" 
+                                        type="button" role="tab" aria-selected="{{ 'true' if llm_provider == 'custom' else 'false' }}">
+                                    <i class="fas fa-cogs me-1"></i> Custom
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Provider Panels -->
+                        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="provider-content">
+                            <!-- Hidden Provider Field -->
+                            <input type="hidden" id="llm_provider" name="llm_provider" value="{{ llm_provider or 'together' }}">
+                            
+                            <!-- Together AI Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'together' or not llm_provider else '' }}" id="together-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Together AI provides access to top open-source models including Llama, Mixtral, and more.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="together_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>Together AI API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
+                                               value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-together-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use the AI models. 
+                                        <a href="https://together.ai/signup" target="_blank" class="text-decoration-none">Get your API key from Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="together_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Together AI Model
+                                    </label>
+                                    <select class="form-select" id="together_model" name="together_model">
+                                        <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" {{ 'selected' if together_model == 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' or not together_model else '' }}>
+                                            Llama-3.3-70B-Instruct-Turbo-Free (Recommended)
+                                        </option>
+                                        <option value="meta-llama/Llama-3.1-8B-Instruct" {{ 'selected' if together_model == 'meta-llama/Llama-3.1-8B-Instruct' else '' }}>
+                                            Llama-3.1-8B-Instruct (Faster)
+                                        </option>
+                                        <option value="mistralai/Mixtral-8x7B-Instruct-v0.1" {{ 'selected' if together_model == 'mistralai/Mixtral-8x7B-Instruct-v0.1' else '' }}>
+                                            Mixtral-8x7B-Instruct-v0.1
+                                        </option>
+                                        <option value="meta-llama/Llama-2-70b-chat-hf" {{ 'selected' if together_model == 'meta-llama/Llama-2-70b-chat-hf' else '' }}>
+                                            Llama-2-70b-chat
+                                        </option>
+                                        <option value="meta-llama/Llama-2-13b-chat-hf" {{ 'selected' if together_model == 'meta-llama/Llama-2-13b-chat-hf' else '' }}>
+                                            Llama-2-13b-chat
+                                        </option>
+                                        <option value="meta-llama/Llama-2-7b-chat-hf" {{ 'selected' if together_model == 'meta-llama/Llama-2-7b-chat-hf' else '' }}>
+                                            Llama-2-7b-chat
+                                        </option>
+                                        <option value="mistralai/Mistral-7B-Instruct-v0.2" {{ 'selected' if together_model == 'mistralai/Mistral-7B-Instruct-v0.2' else '' }}>
+                                            Mistral-7B-Instruct
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Select the AI model to use for chat. Llama-3.3-70B offers the best quality responses.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="together_streaming" name="together_streaming" {{ 'checked' if together_streaming|default(true) else '' }}>
+                                        <label class="form-check-label" for="together_streaming">Enable streaming responses</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- OpenAI Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'openai' else '' }}" id="openai-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    OpenAI provides GPT models including GPT-4 and GPT-3.5 Turbo.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="openai_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>OpenAI API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" 
+                                               value="{{ openai_api_key|default('') }}" placeholder="Enter your OpenAI API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-openai-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use OpenAI models.
+                                        <a href="https://platform.openai.com/api-keys" target="_blank" class="text-decoration-none">Get your API key from OpenAI <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="openai_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>OpenAI Model
+                                    </label>
+                                    <select class="form-select" id="openai_model" name="openai_model">
+                                        <option value="gpt-4o" {{ 'selected' if openai_model == 'gpt-4o' or not openai_model else '' }}>
+                                            GPT-4o (Recommended)
+                                        </option>
+                                        <option value="gpt-4-turbo" {{ 'selected' if openai_model == 'gpt-4-turbo' else '' }}>
+                                            GPT-4 Turbo
+                                        </option>
+                                        <option value="gpt-4" {{ 'selected' if openai_model == 'gpt-4' else '' }}>
+                                            GPT-4
+                                        </option>
+                                        <option value="gpt-3.5-turbo" {{ 'selected' if openai_model == 'gpt-3.5-turbo' else '' }}>
+                                            GPT-3.5 Turbo
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        GPT-4o offers the best quality and speed, while GPT-3.5 Turbo is more cost-effective.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="openai_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Optional)
+                                    </label>
+                                    <input type="text" class="form-control" id="openai_api_base" name="openai_api_base" 
+                                           value="{{ openai_api_base|default('') }}" placeholder="https://api.openai.com/v1">
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Only change this if you're using a different OpenAI-compatible endpoint.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Anthropic Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'anthropic' else '' }}" id="anthropic-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Anthropic provides Claude models which excel at understanding context and following instructions accurately.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="anthropic_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>Anthropic API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="anthropic_api_key" name="anthropic_api_key" 
+                                               value="{{ anthropic_api_key|default('') }}" placeholder="Enter your Anthropic API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-anthropic-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use Claude models.
+                                        <a href="https://console.anthropic.com/settings/keys" target="_blank" class="text-decoration-none">Get your API key from Anthropic <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="anthropic_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Anthropic Model
+                                    </label>
+                                    <select class="form-select" id="anthropic_model" name="anthropic_model">
+                                        <option value="claude-3-opus-20240229" {{ 'selected' if anthropic_model == 'claude-3-opus-20240229' or not anthropic_model else '' }}>
+                                            Claude 3 Opus (Most powerful)
+                                        </option>
+                                        <option value="claude-3-sonnet-20240229" {{ 'selected' if anthropic_model == 'claude-3-sonnet-20240229' else '' }}>
+                                            Claude 3 Sonnet (Balanced)
+                                        </option>
+                                        <option value="claude-3-haiku-20240307" {{ 'selected' if anthropic_model == 'claude-3-haiku-20240307' else '' }}>
+                                            Claude 3 Haiku (Fastest)
+                                        </option>
+                                        <option value="claude-2.1" {{ 'selected' if anthropic_model == 'claude-2.1' else '' }}>
+                                            Claude 2.1
+                                        </option>
+                                        <option value="claude-2.0" {{ 'selected' if anthropic_model == 'claude-2.0' else '' }}>
+                                            Claude 2.0
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Claude 3 Opus offers the highest quality responses, while Claude 3 Haiku is faster and more cost-effective.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="anthropic_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Optional)
+                                    </label>
+                                    <input type="text" class="form-control" id="anthropic_api_base" name="anthropic_api_base" 
+                                           value="{{ anthropic_api_base|default('') }}" placeholder="https://api.anthropic.com/v1">
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Only change this if you're using a different Anthropic-compatible endpoint.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Google Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'google' else '' }}" id="google-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Google provides Gemini models with advanced reasoning capabilities.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="google_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>Google API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="google_api_key" name="google_api_key" 
+                                               value="{{ google_api_key|default('') }}" placeholder="Enter your Google API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-google-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use Gemini models.
+                                        <a href="https://ai.google.dev/tutorials/setup" target="_blank" class="text-decoration-none">Get your API key from Google AI Studio <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="google_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Google Model
+                                    </label>
+                                    <select class="form-select" id="google_model" name="google_model">
+                                        <option value="gemini-1.5-pro" {{ 'selected' if google_model == 'gemini-1.5-pro' or not google_model else '' }}>
+                                            Gemini 1.5 Pro (Recommended)
+                                        </option>
+                                        <option value="gemini-pro" {{ 'selected' if google_model == 'gemini-pro' else '' }}>
+                                            Gemini Pro 
+                                        </option>
+                                        <option value="gemini-1.5-flash" {{ 'selected' if google_model == 'gemini-1.5-flash' else '' }}>
+                                            Gemini 1.5 Flash (Faster)
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Gemini 1.5 Pro has the best reasoning and coding capabilities.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="google_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Optional)
+                                    </label>
+                                    <input type="text" class="form-control" id="google_api_base" name="google_api_base" 
+                                           value="{{ google_api_base|default('') }}" placeholder="https://generativelanguage.googleapis.com/v1beta">
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Only change this if you're using a different Google-compatible endpoint.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Mistral Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'mistral' else '' }}" id="mistral-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Mistral AI provides efficient and powerful language models with excellent reasoning capabilities.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="mistral_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>Mistral API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="mistral_api_key" name="mistral_api_key" 
+                                               value="{{ mistral_api_key|default('') }}" placeholder="Enter your Mistral API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-mistral-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use Mistral models.
+                                        <a href="https://console.mistral.ai/api-keys/" target="_blank" class="text-decoration-none">Get your API key from Mistral AI <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="mistral_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Mistral Model
+                                    </label>
+                                    <select class="form-select" id="mistral_model" name="mistral_model">
+                                        <option value="mistral-large-latest" {{ 'selected' if mistral_model == 'mistral-large-latest' or not mistral_model else '' }}>
+                                            Mistral Large (Most capable)
+                                        </option>
+                                        <option value="mistral-medium-latest" {{ 'selected' if mistral_model == 'mistral-medium-latest' else '' }}>
+                                            Mistral Medium (Balanced)
+                                        </option>
+                                        <option value="mistral-small-latest" {{ 'selected' if mistral_model == 'mistral-small-latest' else '' }}>
+                                            Mistral Small (Fast)
+                                        </option>
+                                        <option value="open-mixtral-8x7b" {{ 'selected' if mistral_model == 'open-mixtral-8x7b' else '' }}>
+                                            Open Mixtral 8x7B
+                                        </option>
+                                        <option value="open-mistral-7b" {{ 'selected' if mistral_model == 'open-mistral-7b' else '' }}>
+                                            Open Mistral 7B
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Mistral Large offers the best quality while Mistral Small is more cost-effective.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="mistral_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Optional)
+                                    </label>
+                                    <input type="text" class="form-control" id="mistral_api_base" name="mistral_api_base" 
+                                           value="{{ mistral_api_base|default('') }}" placeholder="https://api.mistral.ai/v1">
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Only change this if you're using a different Mistral-compatible endpoint.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Cohere Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'cohere' else '' }}" id="cohere-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Cohere provides models that excel at text generation, summarization, and classification.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="cohere_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>Cohere API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="cohere_api_key" name="cohere_api_key" 
+                                               value="{{ cohere_api_key|default('') }}" placeholder="Enter your Cohere API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-cohere-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Required to use Cohere models.
+                                        <a href="https://dashboard.cohere.com/api-keys" target="_blank" class="text-decoration-none">Get your API key from Cohere <i class="fas fa-external-link-alt fa-xs"></i></a>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="cohere_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Cohere Model
+                                    </label>
+                                    <select class="form-select" id="cohere_model" name="cohere_model">
+                                        <option value="command-r-plus" {{ 'selected' if cohere_model == 'command-r-plus' or not cohere_model else '' }}>
+                                            Command R+ (Most capable)
+                                        </option>
+                                        <option value="command-r" {{ 'selected' if cohere_model == 'command-r' else '' }}>
+                                            Command R
+                                        </option>
+                                        <option value="command-light" {{ 'selected' if cohere_model == 'command-light' else '' }}>
+                                            Command Light (Fastest)
+                                        </option>
+                                        <option value="command" {{ 'selected' if cohere_model == 'command' else '' }}>
+                                            Command
+                                        </option>
+                                    </select>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Command R+ offers the best quality for complex tasks.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="cohere_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Optional)
+                                    </label>
+                                    <input type="text" class="form-control" id="cohere_api_base" name="cohere_api_base" 
+                                           value="{{ cohere_api_base|default('') }}" placeholder="https://api.cohere.ai/v1">
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Only change this if you're using a different Cohere-compatible endpoint.
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Ollama Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'ollama' else '' }}" id="ollama-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ollama allows you to run powerful LLM models on Google Colab without installing locally. Choose from our curated model-specific notebooks.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-cloud text-primary me-2"></i>Ollama Model Selection
+                                    </label>
+                                    
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-6">
+                                            <div class="card h-100 model-card" data-model="llama4" data-notebook="llama4.ipynb">
+                                                <div class="card-body">
+                                                    <h5 class="card-title"><i class="fas fa-brain me-2"></i>Llama4</h5>
+                                                    <p class="card-text text-muted small">Best overall performance with comprehensive knowledge and robust coding abilities.</p>
+                                                    <a href="https://colab.research.google.com/github/backdoor-testing-tools/Backdoor-Ai-Flask/blob/main/notebooks/ollama_config/llama4.ipynb" target="_blank" class="btn btn-primary btn-sm">
+                                                        <i class="fab fa-google me-1"></i>Open Notebook
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="card h-100 model-card" data-model="llama4-code" data-notebook="llama4_code.ipynb">
+                                                <div class="card-body">
+                                                    <h5 class="card-title"><i class="fas fa-code me-2"></i>Llama4 Code</h5>
+                                                    <p class="card-text text-muted small">Specialized for programming tasks and code editing with enhanced technical capabilities.</p>
+                                                    <a href="https://colab.research.google.com/github/backdoor-testing-tools/Backdoor-Ai-Flask/blob/main/notebooks/ollama_config/llama4_code.ipynb" target="_blank" class="btn btn-primary btn-sm">
+                                                        <i class="fab fa-google me-1"></i>Open Notebook
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="card h-100 model-card" data-model="llama4-8b" data-notebook="llama4_8b.ipynb">
+                                                <div class="card-body">
+                                                    <h5 class="card-title"><i class="fas fa-bolt me-2"></i>Llama4 8B</h5>
+                                                    <p class="card-text text-muted small">Faster, more efficient version that requires less resources while maintaining good quality.</p>
+                                                    <a href="https://colab.research.google.com/github/backdoor-testing-tools/Backdoor-Ai-Flask/blob/main/notebooks/ollama_config/llama4_8b.ipynb" target="_blank" class="btn btn-primary btn-sm">
+                                                        <i class="fab fa-google me-1"></i>Open Notebook
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="card h-100 model-card" data-model="mistral" data-notebook="mistral.ipynb">
+                                                <div class="card-body">
+                                                    <h5 class="card-title"><i class="fas fa-wind me-2"></i>Mistral</h5>
+                                                    <p class="card-text text-muted small">Excellent balance of performance and efficiency with strong reasoning capabilities.</p>
+                                                    <a href="https://colab.research.google.com/github/backdoor-testing-tools/Backdoor-Ai-Flask/blob/main/notebooks/ollama_config/mistral.ipynb" target="_blank" class="btn btn-primary btn-sm">
+                                                        <i class="fab fa-google me-1"></i>Open Notebook
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Instructions:</strong>
+                                        <ol class="mb-0 ps-3 mt-1">
+                                            <li>Click an "Open Notebook" button above to launch a model-specific notebook</li>
+                                            <li>Run the notebook and follow its instructions to set up Ollama</li>
+                                            <li>Copy the tunnel URL provided in the notebook</li>
+                                            <li>Paste it in the "Ollama API URL" field below</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="ollama_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>Ollama API URL
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-link"></i></span>
+                                        <input type="text" class="form-control" id="ollama_api_base" name="ollama_api_base" 
+                                               value="{{ ollama_api_base|default('') }}" 
+                                               placeholder="Paste the tunnel URL from your Colab notebook">
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Enter the tunnel URL you received from the Colab notebook after setting up Ollama.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="ollama_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Ollama Model
+                                    </label>
+                                    <select class="form-select" id="ollama_model" name="ollama_model">
+                                        <option value="llama4:latest" {{ 'selected' if ollama_model == 'llama4:latest' or not ollama_model else '' }}>
+                                            Llama4 (Default)
+                                        </option>
+                                        <option value="llama4-code:latest" {{ 'selected' if ollama_model == 'llama4-code:latest' else '' }}>
+                                            Llama4 Code (Programming optimized)
+                                        </option>
+                                        <option value="llama4-8b:latest" {{ 'selected' if ollama_model == 'llama4-8b:latest' else '' }}>
+                                            Llama4 8B (Faster)
+                                        </option>
+                                        <option value="mistral:latest" {{ 'selected' if ollama_model == 'mistral:latest' else '' }}>
+                                            Mistral
+                                        </option>
+                                        <option value="custom" {{ 'selected' if ollama_model == 'custom' else '' }}>
+                                            Custom model
+                                        </option>
+                                    </select>
+                                    <div id="custom-model-container" class="mt-2 {{ 'd-none' if ollama_model != 'custom' else '' }}">
+                                        <input type="text" class="form-control" id="custom_ollama_model" name="custom_ollama_model" 
+                                               value="{{ custom_ollama_model|default('') }}" placeholder="Enter custom model name (e.g., gemma:latest)">
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Select the same model you set up in the Colab notebook.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <button type="button" id="test-ollama-connection" class="btn btn-outline-success">
+                                        <i class="fas fa-vial me-1"></i> Test Connection
+                                    </button>
+                                    <div id="ollama-test-result" class="mt-2 d-none alert">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Provider Panel -->
+                            <div class="tab-pane fade {{ 'show active' if llm_provider == 'custom' else '' }}" id="custom-panel" role="tabpanel">
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Use this section to configure a custom LLM provider with an OpenAI-compatible API endpoint.
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="custom_api_key" class="form-label fw-bold">
+                                        <i class="fas fa-key text-primary me-2"></i>API Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                        <input type="password" class="form-control" id="custom_api_key" name="custom_api_key" 
+                                               value="{{ custom_api_key|default('') }}" placeholder="Enter your API key">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggle-custom-key">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        The API key for your custom provider.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="custom_api_base" class="form-label fw-bold">
+                                        <i class="fas fa-link text-primary me-2"></i>API Base URL (Required)
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-link"></i></span>
+                                        <input type="text" class="form-control" id="custom_api_base" name="custom_api_base" 
+                                               value="{{ custom_api_base|default('') }}" placeholder="Enter the API base URL (e.g., https://api.example.com/v1)">
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        The base URL for your custom provider's API.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="custom_model" class="form-label fw-bold">
+                                        <i class="fas fa-brain text-primary me-2"></i>Model Name
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-brain"></i></span>
+                                        <input type="text" class="form-control" id="custom_model" name="custom_model" 
+                                               value="{{ custom_model|default('') }}" placeholder="Enter the model name">
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        The name of the model to use with your custom provider.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="custom_streaming" name="custom_streaming" {{ 'checked' if custom_streaming|default(true) else '' }}>
+                                        <label class="form-check-label" for="custom_streaming">Enable streaming responses</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -210,6 +816,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/providers.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const tokenUsage = document.getElementById('token-usage');
