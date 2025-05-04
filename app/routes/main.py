@@ -114,6 +114,11 @@ def index():
                           token_usage=token_usage,
                           agent_status=agent_status)
 
+@bp.route('/mentat-integration')
+def mentat_integration():
+    """Documentation page for Mentat integration features."""
+    return render_template('mentat_integration.html')
+
 @bp.route('/settings', methods=['GET', 'POST'])
 def settings():
     from app.ai.model_service import model_service

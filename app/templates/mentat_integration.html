@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mentat Integration - Backdoor AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Mentat Integration for Backdoor AI</h1>
+        <p class="lead">This page documents the enhanced features integrated from the Mentat codebase.</p>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Enhanced VS Code Integration</h2>
+            </div>
+            <div class="card-body">
+                <p>The enhanced VS Code integration provides improved workspace and session management, bidirectional communication, and better terminal integration.</p>
+                
+                <h3>API Endpoints</h3>
+                <ul>
+                    <li><code>GET /api/enhanced-vscode/status</code> - Get the status of the VS Code integration</li>
+                    <li><code>GET /api/enhanced-vscode/workspaces</code> - List all workspaces</li>
+                    <li><code>POST /api/enhanced-vscode/workspaces</code> - Create a new workspace</li>
+                    <li><code>DELETE /api/enhanced-vscode/workspaces/:id</code> - Delete a workspace</li>
+                    <li><code>GET /api/enhanced-vscode/sessions</code> - List all sessions</li>
+                    <li><code>POST /api/enhanced-vscode/sessions</code> - Start a new session</li>
+                    <li><code>DELETE /api/enhanced-vscode/sessions/:id</code> - Stop a session</li>
+                    <li><code>POST /api/enhanced-vscode/sessions/:id/command</code> - Execute a command in a session</li>
+                    <li><code>GET /api/enhanced-vscode/sessions/:id/messages</code> - Get pending messages for a session</li>
+                    <li><code>POST /api/enhanced-vscode/sessions/:id/messages</code> - Send a message to the server</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Enhanced Agent Handler</h2>
+            </div>
+            <div class="card-body">
+                <p>The enhanced agent handler provides better context management, improved command execution, and enhanced agent autonomy.</p>
+                
+                <h3>API Endpoints</h3>
+                <ul>
+                    <li><code>POST /api/enhanced-vscode/agent/:id/enable</code> - Enable agent mode</li>
+                    <li><code>POST /api/enhanced-vscode/agent/:id/disable</code> - Disable agent mode</li>
+                    <li><code>GET /api/enhanced-vscode/agent/:id/commands</code> - Get commands for an agent</li>
+                    <li><code>POST /api/enhanced-vscode/agent/:id/execute</code> - Execute a command for an agent</li>
+                    <li><code>GET /api/enhanced-vscode/agent/:id/context</code> - Get context for an agent</li>
+                    <li><code>GET /api/enhanced-vscode/agent/:id/file</code> - Get a file from the agent's context</li>
+                    <li><code>POST /api/enhanced-vscode/agent/:id/file</code> - Add a file to the agent's context</li>
+                    <li><code>DELETE /api/enhanced-vscode/agent/:id/file</code> - Remove a file from the agent's context</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Code Context Manager</h2>
+            </div>
+            <div class="card-body">
+                <p>The code context manager provides better file scanning and filtering, improved context management, code feature extraction, and diff context handling.</p>
+                
+                <h3>API Endpoints</h3>
+                <ul>
+                    <li><code>GET /api/code-context/status</code> - Get the status of the code context manager</li>
+                    <li><code>POST /api/code-context/scan</code> - Scan a repository for files</li>
+                    <li><code>GET /api/code-context/features</code> - List all features in the context</li>
+                    <li><code>POST /api/code-context/features</code> - Add a feature to the context</li>
+                    <li><code>DELETE /api/code-context/features/:path</code> - Remove a feature from the context</li>
+                    <li><code>GET /api/code-context/features/:path</code> - Get a feature from the context</li>
+                    <li><code>GET /api/code-context/find</code> - Find files matching a pattern</li>
+                    <li><code>GET /api/code-context/changes</code> - Get changed files in the repository</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Stream Message System</h2>
+            </div>
+            <div class="card-body">
+                <p>The stream message system provides bidirectional communication, message queuing, and an event-based architecture.</p>
+                
+                <h3>API Endpoints</h3>
+                <ul>
+                    <li><code>GET /api/stream/status</code> - Get the status of the streaming message system</li>
+                    <li><code>POST /api/stream/streams</code> - Create a new message stream</li>
+                    <li><code>DELETE /api/stream/streams/:id</code> - Delete a message stream</li>
+                    <li><code>POST /api/stream/streams/:id/messages</code> - Send a message to a stream</li>
+                    <li><code>GET /api/stream/streams/:id/messages</code> - Stream messages from a stream</li>
+                    <li><code>POST /api/stream/streams/:id/send</code> - Send a simple message to a stream</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Usage Examples</h2>
+            </div>
+            <div class="card-body">
+                <h3>Creating a VS Code Workspace</h3>
+                <pre><code>
+fetch('/api/enhanced-vscode/workspaces', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        name: 'My Workspace',
+        agent_id: 'agent-123',
+        template: 'python'
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                </code></pre>
+
+                <h3>Starting a VS Code Session</h3>
+                <pre><code>
+fetch('/api/enhanced-vscode/sessions', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        workspace_id: 'workspace-123',
+        agent_id: 'agent-123'
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                </code></pre>
+
+                <h3>Scanning a Repository</h3>
+                <pre><code>
+fetch('/api/code-context/scan', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        agent_id: 'agent-123',
+        base_path: '/path/to/repo',
+        max_depth: 5
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                </code></pre>
+
+                <h3>Creating a Message Stream</h3>
+                <pre><code>
+fetch('/api/stream/streams', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        stream_id: 'stream-123'
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                </code></pre>
+
+                <h3>Sending a Message</h3>
+                <pre><code>
+fetch('/api/stream/streams/stream-123/send', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        channel: 'chat',
+        data: {
+            message: 'Hello, world!'
+        }
+    })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+                </code></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>
