@@ -24,6 +24,13 @@ class ToolType(str, Enum):
     BROWSER = "browser"
     EXECUTE_IPYTHON_CELL = "execute_ipython_cell"
     STR_REPLACE_EDITOR = "str_replace_editor"
+    VSCODE_CREATE_WORKSPACE = "vscode_create_workspace"
+    VSCODE_START_SESSION = "vscode_start_session"
+    VSCODE_STOP_SESSION = "vscode_stop_session"
+    VSCODE_LIST_WORKSPACES = "vscode_list_workspaces"
+    VSCODE_LIST_SESSIONS = "vscode_list_sessions"
+    VSCODE_EXECUTE_COMMAND = "vscode_execute_command"
+    VSCODE_DELETE_WORKSPACE = "vscode_delete_workspace"
 
 
 class BaseTool(BaseModel):
@@ -646,6 +653,15 @@ class ToolRegistry:
     def register_tool(self, tool: BaseTool):
         """Register a tool."""
         self.tools[tool.name] = tool
+        
+    def _register_vscode_tools(self):
+        """Register VS Code integration tools."""
+        try:
+            # Import here to avoid circular imports
+            from app.ai.vscode_tool import register_vscode_tools
+            register_vscode_tools()
+        except Exception as e:
+            print(f"VS Code tools registration failed: {str(e)}")
     
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """Get a tool by name."""

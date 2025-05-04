@@ -14,3 +14,19 @@ services:
         sync: false
       - key: GITHUB_TOKEN
         sync: false
+      - key: MCP_ENABLED
+        value: "true"
+      - key: MCP_LOG_LEVEL
+        value: "INFO"
+      - key: VSCODE_SERVER_PATH
+        value: "/usr/bin/code-server"
+    healthCheckPath: /api/health
+  
+  - type: postgres
+    name: backdoor-db
+    plan: free
+    ipAllowList: []
+
+databases:
+  - name: backdoor-db
+    plan: free

@@ -1,37 +1,31 @@
-# Backdoor AI Flask Application with OpenHands Integration
+# Backdoor AI Flask
 
-A Flask-based web application that integrates with the meta-llama/Llama-3.3-70B-Instruct-Turbo-Free model from Together AI and leverages the open-source All-Hands-AI/OpenHands repository for AI-driven software development capabilities.
+A powerful AI application with integrated VS Code server and PostgreSQL database for persistent context management and agent-based tool interaction.
 
 ## Features
 
-- **AI Chat Interface**: Interact with the Llama-3.3-70B model for code assistance and task automation
-- **GitHub Integration**: Configure GitHub tokens for repository access
-- **Chat History**: Save and download chat conversations
-- **Settings Management**: Configure API keys and tokens
-- **Responsive Design**: Works on desktop and mobile devices
+- **AI-Powered Chat Interface**: Interact with a powerful AI model (Together AI Llama-3.3-70B)
+- **Model Context Protocol (MCP)**: Persistent context storage and management using PostgreSQL
+- **Github Integration**: Connect to repositories and analyze code
+- **VS Code Server Integration**: Create workspaces and edit code through VS Code
+- **Agent System**: AI agents with specific roles can use tools and execute commands
+- **Tool Registry**: Centralized tool management with permission controls
+- **Web Browsing**: Browse and extract content from websites
 
-## OpenHands Integration Features
+## Setup
 
-- **Function Calling**: Execute tools and functions directly from the AI chat
-- **File Operations**: View, create, and edit files through the AI interface
-- **Bash Command Execution**: Run terminal commands and view results
-- **Python Code Execution**: Run Python code in an IPython environment
-- **Web Browsing**: Read content from webpages and interact with web browsers
-- **Thought Process**: Log AI thoughts for complex reasoning
-- **Task Completion**: Signal when tasks are completed with summaries
+### Prerequisites
 
-## Prerequisites
+- Python 3.10+
+- PostgreSQL (for production)
+- Docker (optional)
 
-- Python 3.11.11 (Render.com's default Python version)
-- Together AI API key
-- GitHub token (optional)
-
-## Installation
+### Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Tools-for-testing/Backdoor-Ai-Flask.git
-   cd Backdoor-Ai-Flask
+   git clone https://github.com/your-username/backdoor-ai-flask.git
+   cd backdoor-ai-flask
    ```
 
 2. Install dependencies:
@@ -39,45 +33,38 @@ A Flask-based web application that integrates with the meta-llama/Llama-3.3-70B-
    pip install -r requirements.txt
    ```
 
-3. Run the application:
+3. Set environment variables:
    ```
-   python wsgi.py
+   cp .env.example .env
+   ```
+   Edit the `.env` file to include your API keys and database configuration.
+
+4. Initialize the database:
+   ```
+   flask db upgrade
    ```
 
-4. Access the application at http://localhost:12000
+5. Run the application:
+   ```
+   python run.py
+   ```
 
-## Environment Variables
+## Docker Deployment
 
-- `SECRET_KEY`: Flask secret key for session security
-- `TOGETHER_API_KEY`: Your Together AI API key
-- `GITHUB_TOKEN`: Your GitHub personal access token
-- `OPENHANDS_ENV`: Environment type (development, production)
-- `OPENHANDS_LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- `OPENHANDS_DISABLE_TOOLS`: Comma-separated list of tools to disable
-- `OPENHANDS_ENABLE_TOOLS`: Comma-separated list of tools to enable
-- `OPENHANDS_TOOL_TIMEOUT`: Timeout in seconds for tool execution (default: 120)
+1. Build the Docker image:
+   ```
+   docker build -t backdoor-ai-flask .
+   ```
 
-## Deployment on Render.com
+2. Run the container:
+   ```
+   docker run -p 5000:5000 -e TOGETHER_API_KEY=your_api_key backdoor-ai-flask
+   ```
 
-This application is designed to run on Render.com's free tier:
+## Key Components
 
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Set the following:
-   - Environment: Python 3
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn wsgi:app`
-4. Add environment variables in the Render dashboard
-
-## Docker Support
-
-Build and run with Docker:
-
-```
-docker build -t backdoor-ai .
-docker run -p 8000:8000 backdoor-ai
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- **MCP Server**: The Model Context Protocol server for context management
+- **Agent System**: Manages AI agents with different roles and permissions
+- **VS Code Integration**: Provides a code-server instance for editing code
+- **Tool Handler**: Centralized tool execution with permission controls
+- **Database Models**: Store context items, agents, tasks, and tool usage

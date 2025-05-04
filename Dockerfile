@@ -1,24 +1,45 @@
-FROM python:3.11.11-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy requirements first for better caching
+# Install code-server and required dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    gnupg \
+    build-essential \
+    postgresql-client \
+    && curl -fsSL https://code-server.dev/install.sh | sh \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application
 COPY . .
 
-# Create directory for chat history
-RUN mkdir -p /tmp/chat_history && chmod 777 /tmp/chat_history
+# Create necessary directories
+RUN mkdir -p /tmp/backdoor/tools \
+    /tmp/backdoor/cache \
+    /tmp/backdoor/logs \
+    /tmp/backdoor/data \
+    /tmp/backdoor/config \
+    /tmp/backdoor/vscode/workspaces \
+    /tmp/backdoor/vscode/sessions
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV FLASK_APP=wsgi.py
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VSCODE_SERVER_PATH=/usr/bin/code-server
 
 # Expose port
-EXPOSE 8000
+EXPOSE 5000
 
-# Run the application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "wsgi:app"]
+# Initialize the database and run migrations
+RUN flask db upgrade || echo "Database migrations will be run at startup"
+
+# Run the application
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:app"]

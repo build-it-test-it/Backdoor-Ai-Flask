@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SECRET_KEY=${SECRET_KEY:-default_secret_key_change_me}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/backdoor
+      - MCP_ENABLED=true
+      - MCP_LOG_LEVEL=INFO
+      - VSCODE_SERVER_PATH=/usr/bin/code-server
+    depends_on:
+      - db
+    volumes:
+      - ./app:/app/app
+      - backdoor_data:/tmp/backdoor
+
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=backdoor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+  backdoor_data:
