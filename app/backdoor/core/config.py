@@ -138,6 +138,19 @@ class LLMConfig:
             api_base="",
             models=[],
             default_model=None
+        ),
+        "ollama": LLMProviderConfig(
+            name="Ollama",
+            api_base="http://localhost:11434",
+            models=[
+                "llama4:latest",
+                "llama4-8b:latest",
+                "llama4-code:latest",
+                "llama4-tiny:latest",
+                "mistral:latest",
+                "gemma:latest",
+            ],
+            default_model="llama4:latest"
         )
     })
 
@@ -235,6 +248,11 @@ class AppConfig:
             self.llm.api_key = os.environ.get("COHERE_API_KEY", self.llm.api_key)
             self.llm.model = os.environ.get("COHERE_MODEL", self.llm.providers["cohere"].default_model)
             self.llm.api_base = os.environ.get("COHERE_API_BASE", self.llm.providers["cohere"].api_base)
+        elif self.llm.provider == "ollama":
+            # Ollama doesn't require an API key
+            self.llm.api_key = None
+            self.llm.model = os.environ.get("OLLAMA_MODEL", self.llm.providers["ollama"].default_model)
+            self.llm.api_base = os.environ.get("OLLAMA_API_BASE", self.llm.providers["ollama"].api_base)
         elif self.llm.provider == "custom":
             self.llm.api_key = os.environ.get("CUSTOM_API_KEY", self.llm.api_key)
             self.llm.model = os.environ.get("CUSTOM_MODEL", "")

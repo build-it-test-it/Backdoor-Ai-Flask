@@ -85,6 +85,10 @@ class MultiProviderLLMClient:
             litellm.cohere_api_key = self.api_key
             if self.api_base:
                 os.environ["COHERE_API_BASE"] = self.api_base
+        elif self.provider == "ollama":
+            # Ollama doesn't require an API key
+            if self.api_base:
+                os.environ["OLLAMA_API_BASE"] = self.api_base
         elif self.provider == "custom":
             # For custom provider, we'll use the OpenAI-compatible API
             os.environ["OPENAI_API_KEY"] = self.api_key
@@ -110,6 +114,8 @@ class MultiProviderLLMClient:
             return f"mistral/{self.model}"
         elif self.provider == "cohere":
             return f"cohere/{self.model}"
+        elif self.provider == "ollama":
+            return f"ollama/{self.model}"
         elif self.provider == "custom":
             # For custom provider, we'll use the OpenAI-compatible API
             return f"openai/{self.model}"
@@ -335,6 +341,7 @@ class MultiProviderLLMClient:
                 litellm.cohere_api_key = self.api_key
             elif self.provider == "custom":
                 os.environ["OPENAI_API_KEY"] = self.api_key
+            # For Ollama, we don't need to set an API key as it doesn't require one
         
         # Update API base
         if "api_base" in config:
@@ -353,6 +360,8 @@ class MultiProviderLLMClient:
                 os.environ["MISTRAL_API_BASE"] = self.api_base
             elif self.provider == "cohere":
                 os.environ["COHERE_API_BASE"] = self.api_base
+            elif self.provider == "ollama":
+                os.environ["OLLAMA_API_BASE"] = self.api_base
             elif self.provider == "custom":
                 os.environ["OPENAI_API_BASE"] = self.api_base
         
