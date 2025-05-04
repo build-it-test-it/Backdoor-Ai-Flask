@@ -35,9 +35,13 @@ class TogetherAIService:
         }
         
         # Load token usage from session if available
-        session_tokens = session.get('token_usage')
-        if session_tokens:
-            self.token_usage = session_tokens
+        try:
+            session_tokens = session.get('token_usage')
+            if session_tokens:
+                self.token_usage = session_tokens
+        except RuntimeError:
+            # Working outside of request context
+            pass
     
     def set_api_key(self, api_key):
         """Set the API key"""

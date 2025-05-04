@@ -151,12 +151,16 @@ class BehaviorTracker:
     
     def load_behaviors(self):
         """Load behaviors from disk"""
-        session_id = session.get('session_id')
-        if not session_id:
-            return
-        
-        session_dir = os.path.join(current_app.config['CHAT_HISTORY_DIR'], session_id)
-        behavior_file = os.path.join(session_dir, 'user_behaviors.json')
+        try:
+            session_id = session.get('session_id')
+            if not session_id:
+                return
+            
+            session_dir = os.path.join(current_app.config['CHAT_HISTORY_DIR'], session_id)
+            behavior_file = os.path.join(session_dir, 'user_behaviors.json')
+        except RuntimeError:
+            # Working outside of request context, use default behavior file
+            behavior_file = os.path.join(os.getcwd(), 'data', 'user_behaviors.json')
         
         if os.path.exists(behavior_file):
             try:
@@ -179,12 +183,16 @@ class BehaviorTracker:
     
     def load_interactions(self):
         """Load interactions from disk"""
-        session_id = session.get('session_id')
-        if not session_id:
-            return
-        
-        session_dir = os.path.join(current_app.config['CHAT_HISTORY_DIR'], session_id)
-        interactions_file = os.path.join(session_dir, 'ai_interactions.json')
+        try:
+            session_id = session.get('session_id')
+            if not session_id:
+                return
+            
+            session_dir = os.path.join(current_app.config['CHAT_HISTORY_DIR'], session_id)
+            interactions_file = os.path.join(session_dir, 'ai_interactions.json')
+        except RuntimeError:
+            # Working outside of request context, use default interaction file
+            interactions_file = os.path.join(os.getcwd(), 'data', 'ai_interactions.json')
         
         if os.path.exists(interactions_file):
             try:
