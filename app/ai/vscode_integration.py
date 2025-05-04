@@ -78,17 +78,44 @@ class VSCodeManager:
     def _find_code_server(self) -> Optional[str]:
         """Find code-server executable in the system."""
         try:
+            # First check for environment variable setting (preferred method)
+            env_path = os.environ.get('VSCODE_SERVER_PATH')
+            if env_path and os.path.exists(env_path) and os.access(env_path, os.X_OK):
+                logger.info(f"Found code-server from environment variable: {env_path}")
+                return env_path
+            
             # Try the most common locations
             possible_paths = [
                 "/usr/bin/code-server",
                 "/usr/local/bin/code-server",
                 "/home/coder/code-server/bin/code-server",
+                "/opt/code-server/bin/code-server",
+                "/opt/render/project/code-server/bin/code-server",
+                # Render.com specific paths
+                "/usr/local/bin/code-server",
                 # Add more possible paths if needed
             ]
             
-            # Check if any of these exist
+            # Also check the code-server directory inside the project (if installed locally)
+            project_roots = [
+                os.getcwd(),  # Current working directory
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),  # Project root
+                "/opt/render/project/src"  # Render.com project path
+            ]
+            
+            for root in project_roots:
+                if os.path.exists(root):
+                    # Look for typical code-server binary locations in the project
+                    possible_paths.extend([
+                        os.path.join(root, "code-server", "bin", "code-server"),
+                        os.path.join(root, "node_modules", ".bin", "code-server"),
+                        os.path.join(root, "node_modules", "code-server", "bin", "code-server")
+                    ])
+            
+            # Check if any of these paths exist
             for path in possible_paths:
                 if os.path.exists(path) and os.access(path, os.X_OK):
+                    logger.info(f"Found code-server at: {path}")
                     return path
             
             # If not found in standard locations, try using 'which'
@@ -100,8 +127,18 @@ class VSCodeManager:
             )
             
             if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
+                server_path = result.stdout.strip()
+                logger.info(f"Found code-server using 'which': {server_path}")
+                return server_path
             
+            # Last resort: try to find it in PATH
+            for path_dir in os.environ.get('PATH', '').split(os.pathsep):
+                code_server_path = os.path.join(path_dir, 'code-server')
+                if os.path.exists(code_server_path) and os.access(code_server_path, os.X_OK):
+                    logger.info(f"Found code-server in PATH: {code_server_path}")
+                    return code_server_path
+            
+            logger.warning("Could not find code-server executable. VS Code integration will be limited.")
             return None
         except Exception as e:
             logger.error(f"Error finding code-server: {e}")
