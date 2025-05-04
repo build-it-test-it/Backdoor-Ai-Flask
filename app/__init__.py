@@ -44,6 +44,7 @@ def create_app():
         BACKDOOR_DOWNLOADS_DIR=os.path.join('/tmp', 'backdoor', 'downloads'),
         BACKDOOR_BACKUPS_DIR=os.path.join('/tmp', 'backdoor', 'backups'),
         BACKDOOR_SESSIONS_DIR=os.path.join('/tmp', 'backdoor', 'sessions'),
+        BACKDOOR_MICROAGENTS_DIR=os.path.join('/tmp', 'backdoor', 'microagents'),
     )
     
     # Handle Render.com's DATABASE_URL format (postgres:// to postgresql://)
@@ -69,7 +70,7 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Register blueprints
-    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api
+    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api, code_agent_api
     from app.ai import mcp_routes, mcp_routes_enhanced
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp)
@@ -79,6 +80,7 @@ def create_app():
     app.register_blueprint(vscode_api.bp)
     app.register_blueprint(health.bp)
     app.register_blueprint(enhanced_agents_api.bp)
+    app.register_blueprint(code_agent_api.bp)
     
     # Initialize session ID middleware
     @app.before_request
