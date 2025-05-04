@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: |
       # Install system dependencies for code-server, Docker and GPU support
-      apt-get update && apt-get install -y curl wget git gnupg build-essential apt-transport-https ca-certificates lsb-release lshw pciutils
+      apt-get update && apt-get install -y curl wget git gnupg build-essential apt-transport-https ca-certificates lsb-release lshw pciutils postgresql-client
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
       echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
       apt-get update && apt-get install -y docker-ce-cli
@@ -16,8 +16,87 @@ services:
       # Install Python dependencies
       pip install -r requirements.txt
 
-      # Run database migrations
-      python -m flask db upgrade
+      # Set up database handling
+      echo "Setting up database connection..."
+      
+      # Handle Render's postgres:// to postgresql:// conversion for SQLAlchemy
+      if [[ "$DATABASE_URL" == postgres://* ]]; then
+        export FIXED_DATABASE_URL=$(echo $DATABASE_URL | sed 's/postgres:\/\//postgresql:\/\//')
+        echo "Converted DATABASE_URL format for SQLAlchemy compatibility"
+      else
+        export FIXED_DATABASE_URL=$DATABASE_URL
+      fi
+      
+      # Test database connection before migrations
+      echo "Testing database connection..."
+      if python -c "
+import sys, psycopg2, time
+from urllib.parse import urlparse
+
+# Extract connection details from DATABASE_URL
+url = urlparse('$FIXED_DATABASE_URL')
+dbname = url.path[1:]  # Remove leading slash
+user = url.username
+password = url.password
+host = url.hostname
+port = url.port or 5432
+
+# Try to connect with retries
+max_retries = 5
+retry_delay = 2
+for attempt in range(max_retries):
+    try:
+        conn = psycopg2.connect(
+            dbname=dbname,
+            user=user,
+            password=password,
+            host=host,
+            port=port
+        )
+        conn.close()
+        print(f'Successfully connected to PostgreSQL database (attempt {attempt+1})!')
+        sys.exit(0)
+    except Exception as e:
+        print(f'Error connecting to database (attempt {attempt+1}/{max_retries}): {e}')
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+            retry_delay *= 1.5
+        else:
+            sys.exit(1)
+      "; then
+        echo "Database connection successful"
+      else
+        echo "ERROR: Failed to connect to database after multiple attempts"
+        echo "Check the database URL and ensure PostgreSQL is running"
+        exit 1
+      fi
+      
+      # Run database migrations with proper error handling
+      echo "Running database migrations..."
+      python -m flask db stamp head || { echo "Error: Failed to stamp database version"; exit 1; }
+      python -m flask db migrate -m "Auto migration during deployment" || { echo "Warning: Migration generation failed, continuing with upgrade"; }
+      python -m flask db upgrade || { echo "Error: Failed to upgrade database"; exit 1; }
+      
+      # Verify database schema after migrations
+      echo "Verifying database schema..."
+      python -c "
+import sys
+from app import create_app
+from app.database import db_check_connection
+
+app = create_app()
+with app.app_context():
+    try:
+        if db_check_connection(max_retries=3):
+            print('Database schema verification successful!')
+            sys.exit(0)
+        else:
+            print('Database schema verification failed')
+            sys.exit(1)
+    except Exception as e:
+        print(f'Error verifying database schema: {e}')
+        sys.exit(1)
+      " || { echo "WARNING: Database schema verification failed, but continuing deployment"; }
 
       # Create directories for initialization
       echo "Creating necessary directories..."
@@ -31,6 +110,9 @@ services:
         fi
       fi
 
+      # Create database directories if needed
+      mkdir -p /tmp/backdoor/db_backups
+
       echo "Backdoor initialized at $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > /tmp/backdoor/initialized
       echo "Pre-boot initialization complete!"
 
@@ -41,7 +123,15 @@ services:
         find app/backdoor/microagents -type f -name "*.md" -exec sed -i 's/openhands/backdoor/g' {} \;
         find app/backdoor/microagents -type f -name "*.md" -exec sed -i 's/OpenHands/Backdoor/g' {} \;
       fi
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 wsgi:app
+    startCommand: |
+      # Verify database connection on startup
+      python -c "
+      from app import create_app
+      from app.database import db_check_connection
+      app = create_app()
+      with app.app_context():
+          db_check_connection(max_retries=5)
+      " && gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 wsgi:app
     autoDeploy: true
     envVars:
       - key: LLM_PROVIDER
@@ -52,6 +142,8 @@ services:
         fromDatabase:
           name: backdoor-db
           property: connectionString
+      - key: SQLALCHEMY_TRACK_MODIFICATIONS
+        value: "false"
       - key: MCP_ENABLED
         value: "true"
       - key: MCP_LOG_LEVEL
@@ -60,6 +152,8 @@ services:
         value: "/usr/bin/code-server"
       - key: BACKDOOR_ENV
         value: "production"
+      - key: BACKDOOR_VERSION
+        value: "2.0.0"
       - key: BACKDOOR_DOCKER_ENABLED
         value: "true"
       - key: BACKDOOR_DOCKER_IMAGE
@@ -80,9 +174,13 @@ services:
         value: "true"
       - key: ALLOW_CUSTOM_MODELS
         value: "true"
+      - key: LOG_LEVEL
+        value: "INFO"
     healthCheckPath: /api/health
+    healthCheckTimeout: 5
 
 databases:
   - name: backdoor-db
     plan: free
     postgresMajorVersion: 14
+    ipAllowList: [] # Only allow internal connections
