@@ -4,6 +4,7 @@ import os
 import platform
 import sys
 import uuid
+import logging
 from datetime import datetime
 
 def create_app():
@@ -58,6 +59,9 @@ def create_app():
         BACKDOOR_VERSION='2.0.0',
         BACKDOOR_ENV=os.environ.get('BACKDOOR_ENV', 'production'),
         
+        # Logging
+        LOG_LEVEL=os.environ.get('LOG_LEVEL', 'INFO'),
+        
         # System information
         BACKDOOR_PLATFORM=platform.system(),
         BACKDOOR_PYTHON_VERSION=platform.python_version(),
@@ -71,6 +75,11 @@ def create_app():
         BACKDOOR_DOCKER_ENABLED=os.environ.get('BACKDOOR_DOCKER_ENABLED', 'true').lower() == 'true',
         BACKDOOR_DOCKER_IMAGE=os.environ.get('BACKDOOR_DOCKER_IMAGE', 'backdoor/runtime:latest'),
         BACKDOOR_DOCKER_NETWORK=os.environ.get('BACKDOOR_DOCKER_NETWORK', 'backdoor-network'),
+        
+        # VS Code configuration
+        VSCODE_SERVER_PATH=os.environ.get('VSCODE_SERVER_PATH', '/usr/bin/code-server'),
+        VSCODE_PORT_RANGE_START=int(os.environ.get('VSCODE_PORT_RANGE_START', '8900')),
+        VSCODE_PORT_RANGE_END=int(os.environ.get('VSCODE_PORT_RANGE_END', '8999')),
         
         # Directory paths
         BACKDOOR_TOOLS_DIR=os.path.join('/tmp', 'backdoor', 'tools'),
@@ -89,6 +98,17 @@ def create_app():
         BACKDOOR_BACKUPS_DIR=os.path.join('/tmp', 'backdoor', 'backups'),
         BACKDOOR_SESSIONS_DIR=os.path.join('/tmp', 'backdoor', 'sessions'),
         BACKDOOR_MICROAGENTS_DIR=os.path.join('/tmp', 'backdoor', 'microagents'),
+        BACKDOOR_VSCODE_DIR=os.path.join('/tmp', 'backdoor', 'vscode'),
+    )
+    
+    # Configure logging
+    logging_level = getattr(logging, app.config['LOG_LEVEL'])
+    logging.basicConfig(
+        level=logging_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
     )
     
     # Handle Render.com's DATABASE_URL format (postgres:// to postgresql://)
@@ -102,6 +122,17 @@ def create_app():
     
     # Ensure the chat history directory exists
     os.makedirs(app.config['CHAT_HISTORY_DIR'], exist_ok=True)
+    
+    # Create VS Code directories if they don't exist
+    vscode_dirs = [
+        os.path.join(app.config['BACKDOOR_VSCODE_DIR'], 'workspaces'),
+        os.path.join(app.config['BACKDOOR_VSCODE_DIR'], 'sessions'),
+        os.path.join(app.config['BACKDOOR_VSCODE_DIR'], 'logs'),
+        os.path.join(app.config['BACKDOOR_VSCODE_DIR'], 'extensions'),
+        os.path.join(app.config['BACKDOOR_VSCODE_DIR'], 'user-data')
+    ]
+    for directory in vscode_dirs:
+        os.makedirs(directory, exist_ok=True)
     
     # Create a marker file to indicate Backdoor is initialized
     with open(os.path.join(app.config['BACKDOOR_CONFIG_DIR'], 'initialized'), 'w') as f:
@@ -143,9 +174,17 @@ def create_app():
     
     # Import all models to ensure they're registered with SQLAlchemy
     with app.app_context():
+        # Import core models
         from app.ai.mcp_models import ContextItem, Agent, ToolUsage, ToolResult, Task
+        
+        # Import additional models
+        from app.models import TokenUsage
+        
+        # Create tables for SQLite (PostgreSQL uses migrations)
         if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite:'):
             db.create_all()
-            print(f"Created SQLite database tables at {app.config['SQLALCHEMY_DATABASE_URI']}")
+            app.logger.info(f"Created SQLite database tables at {app.config['SQLALCHEMY_DATABASE_URI']}")
+    
+    app.logger.info(f"Application initialized successfully. Environment: {app.config['BACKDOOR_ENV']}")
     
     return app

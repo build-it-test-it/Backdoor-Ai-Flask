@@ -1,9 +1,16 @@
 from flask import Blueprint, render_template, jsonify, request, current_app
+import logging
 import time
-from app.database import get_db
 import json
 import os
 from datetime import datetime, timedelta
+from sqlalchemy import func, extract
+
+from app.database import db
+from app.models.token_usage import TokenUsage
+
+# Set up logging
+logger = logging.getLogger("performance")
 
 # Create a Blueprint for performance-related routes
 performance_bp = Blueprint('performance', __name__)
@@ -17,84 +24,48 @@ def performance():
 @performance_bp.route('/api/performance/token-stats')
 def token_stats():
     try:
-        db = get_db()
+        # Get session ID from query params or session
+        session_id = request.args.get('session_id')
         
-        # Get token usage summary
-        cursor = db.cursor()
-        cursor.execute('''
-            SELECT 
-                SUM(prompt_tokens) as total_prompt, 
-                SUM(completion_tokens) as total_completion,
-                SUM(prompt_tokens + completion_tokens) as total_tokens
-            FROM token_usage
-        ''')
-        
-        totals = cursor.fetchone()
+        # Get token usage summary directly with our new TokenUsage model
+        totals = TokenUsage.get_total_usage(session_id=session_id)
         
         # Get daily usage for the past 7 days
-        cursor.execute('''
-            SELECT 
-                DATE(timestamp) as date,
-                SUM(prompt_tokens) as prompt_tokens,
-                SUM(completion_tokens) as completion_tokens
-            FROM token_usage
-            WHERE timestamp >= DATE('now', '-7 days')
-            GROUP BY DATE(timestamp)
-            ORDER BY date ASC
-        ''')
-        
-        daily_usage = cursor.fetchall()
+        daily_usage = TokenUsage.get_daily_usage(days=7, session_id=session_id)
         
         # Get model distribution
-        cursor.execute('''
-            SELECT 
-                model,
-                COUNT(*) as usage_count,
-                SUM(prompt_tokens + completion_tokens) as total_tokens
-            FROM token_usage
-            GROUP BY model
-            ORDER BY total_tokens DESC
-            LIMIT 5
-        ''')
-        
-        model_usage = cursor.fetchall()
+        model_usage = TokenUsage.get_model_usage(limit=5, session_id=session_id)
         
         # Get recent requests
-        cursor.execute('''
-            SELECT 
-                timestamp,
-                model,
-                prompt_tokens,
-                completion_tokens,
-                (prompt_tokens + completion_tokens) as total,
-                response_time
-            FROM token_usage
-            ORDER BY timestamp DESC
-            LIMIT 10
-        ''')
-        
-        recent_usage = cursor.fetchall()
+        recent_usage = TokenUsage.get_recent_usage(limit=10, session_id=session_id)
         
         # Calculate change percentage (comparing last 24h to previous 24h)
-        cursor.execute('''
-            SELECT 
-                SUM(prompt_tokens) as prompt_tokens,
-                SUM(completion_tokens) as completion_tokens
-            FROM token_usage
-            WHERE timestamp >= DATE('now', '-1 day')
-        ''')
+        # Get usage for last 24 hours
+        now = datetime.utcnow()
+        yesterday = now - timedelta(days=1)
+        day_before = yesterday - timedelta(days=1)
         
-        last_day = cursor.fetchone()
+        # Query for last day
+        last_day_query = db.session.query(
+            func.sum(TokenUsage.prompt_tokens).label('prompt_tokens'),
+            func.sum(TokenUsage.completion_tokens).label('completion_tokens')
+        ).filter(TokenUsage.timestamp >= yesterday)
         
-        cursor.execute('''
-            SELECT 
-                SUM(prompt_tokens) as prompt_tokens,
-                SUM(completion_tokens) as completion_tokens
-            FROM token_usage
-            WHERE timestamp >= DATE('now', '-2 days') AND timestamp < DATE('now', '-1 day')
-        ''')
+        if session_id:
+            last_day_query = last_day_query.filter(TokenUsage.session_id == session_id)
+            
+        last_day_result = last_day_query.first()
         
-        previous_day = cursor.fetchone()
+        # Query for previous day
+        previous_day_query = db.session.query(
+            func.sum(TokenUsage.prompt_tokens).label('prompt_tokens'),
+            func.sum(TokenUsage.completion_tokens).label('completion_tokens')
+        ).filter(TokenUsage.timestamp >= day_before, TokenUsage.timestamp < yesterday)
+        
+        if session_id:
+            previous_day_query = previous_day_query.filter(TokenUsage.session_id == session_id)
+            
+        previous_day_result = previous_day_query.first()
         
         # Calculate changes
         changes = {
@@ -104,52 +75,46 @@ def token_stats():
             'response_time': 0
         }
         
-        if previous_day and previous_day['prompt_tokens'] and last_day and last_day['prompt_tokens']:
-            prompt_change = ((last_day['prompt_tokens'] - previous_day['prompt_tokens']) / previous_day['prompt_tokens']) * 100
+        # Safety check to avoid division by zero
+        if (previous_day_result.prompt_tokens and last_day_result.prompt_tokens and
+            previous_day_result.prompt_tokens > 0):
+            prompt_change = ((last_day_result.prompt_tokens - previous_day_result.prompt_tokens) / 
+                           previous_day_result.prompt_tokens) * 100
             changes['prompt_tokens'] = round(prompt_change, 1)
         
-        if previous_day and previous_day['completion_tokens'] and last_day and last_day['completion_tokens']:
-            completion_change = ((last_day['completion_tokens'] - previous_day['completion_tokens']) / previous_day['completion_tokens']) * 100
+        if (previous_day_result.completion_tokens and last_day_result.completion_tokens and
+            previous_day_result.completion_tokens > 0):
+            completion_change = ((last_day_result.completion_tokens - previous_day_result.completion_tokens) / 
+                               previous_day_result.completion_tokens) * 100
             changes['completion_tokens'] = round(completion_change, 1)
-        
-        if totals:
-            total_tokens = totals['total_tokens'] or 0
-            prompt_tokens = totals['total_prompt'] or 0
-            completion_tokens = totals['total_completion'] or 0
-        else:
-            total_tokens = 0
-            prompt_tokens = 0
-            completion_tokens = 0
         
         # Format dates for chart display
         chart_dates = []
         chart_prompt_data = []
         chart_completion_data = []
         
+        # Create a dictionary of daily usage for easier lookup
+        daily_usage_dict = {item['date']: item for item in daily_usage}
+        
         # Get past 7 days with 0s for missing dates
         for i in range(6, -1, -1):
             date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
             chart_dates.append(date)
             
-            # Find if we have data for this date
-            found = False
-            for usage in daily_usage or []:
-                if usage['date'] == date:
-                    chart_prompt_data.append(usage['prompt_tokens'])
-                    chart_completion_data.append(usage['completion_tokens'])
-                    found = True
-                    break
-            
-            if not found:
+            # Check if we have data for this date
+            if date in daily_usage_dict:
+                chart_prompt_data.append(daily_usage_dict[date]['prompt_tokens'])
+                chart_completion_data.append(daily_usage_dict[date]['completion_tokens'])
+            else:
                 chart_prompt_data.append(0)
                 chart_completion_data.append(0)
         
         return jsonify({
             'success': True,
             'token_stats': {
-                'total_tokens': total_tokens,
-                'prompt_tokens': prompt_tokens,
-                'completion_tokens': completion_tokens,
+                'total_tokens': totals['total_tokens'],
+                'prompt_tokens': totals['prompt_tokens'],
+                'completion_tokens': totals['completion_tokens'],
                 'changes': changes
             },
             'chart_data': {
@@ -157,12 +122,12 @@ def token_stats():
                 'prompt_tokens': chart_prompt_data,
                 'completion_tokens': chart_completion_data
             },
-            'model_usage': [dict(row) for row in (model_usage or [])],
-            'recent_usage': [dict(row) for row in (recent_usage or [])]
+            'model_usage': model_usage,
+            'recent_usage': recent_usage
         })
         
     except Exception as e:
-        current_app.logger.error(f"Error getting token stats: {str(e)}")
+        logger.error(f"Error getting token stats: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -172,31 +137,46 @@ def token_stats():
 @performance_bp.route('/api/performance/metrics')
 def performance_metrics():
     try:
-        db = get_db()
-        cursor = db.cursor()
+        # Get session ID from query params or session
+        session_id = request.args.get('session_id')
         
-        # Get average response time
-        cursor.execute('''
-            SELECT AVG(response_time) as avg_response_time
-            FROM token_usage
-            WHERE response_time IS NOT NULL
-        ''')
+        # Use TokenUsage model for metrics
+        metrics_query = db.session.query(
+            func.avg(TokenUsage.response_time).label('avg_response_time')
+        ).filter(TokenUsage.response_time != None)
         
-        avg_time = cursor.fetchone()
-        avg_response_time = avg_time['avg_response_time'] if avg_time else 0
+        if session_id:
+            metrics_query = metrics_query.filter(TokenUsage.session_id == session_id)
+            
+        metrics_result = metrics_query.first()
+        avg_response_time = metrics_result.avg_response_time or 0
         
-        # Get response times for the past 7 days
-        cursor.execute('''
-            SELECT 
-                DATE(timestamp) as date,
-                AVG(response_time) as avg_time
-            FROM token_usage
-            WHERE timestamp >= DATE('now', '-7 days') AND response_time IS NOT NULL
-            GROUP BY DATE(timestamp)
-            ORDER BY date ASC
-        ''')
+        # Get daily response times
+        now = datetime.utcnow()
+        seven_days_ago = now - timedelta(days=7)
         
-        daily_response_times = cursor.fetchall()
+        daily_metrics_query = db.session.query(
+            func.date_trunc('day', TokenUsage.timestamp).label('date'),
+            func.avg(TokenUsage.response_time).label('avg_time')
+        ).filter(
+            TokenUsage.timestamp >= seven_days_ago,
+            TokenUsage.response_time != None
+        ).group_by(
+            func.date_trunc('day', TokenUsage.timestamp)
+        ).order_by(
+            func.date_trunc('day', TokenUsage.timestamp)
+        )
+        
+        if session_id:
+            daily_metrics_query = daily_metrics_query.filter(TokenUsage.session_id == session_id)
+            
+        daily_metrics = daily_metrics_query.all()
+        
+        # Create a dictionary for easier lookup
+        daily_metrics_dict = {
+            result.date.strftime('%Y-%m-%d'): round(result.avg_time, 2) 
+            for result in daily_metrics
+        }
         
         # Format dates for chart display
         chart_dates = []
@@ -204,18 +184,13 @@ def performance_metrics():
         
         # Get past 7 days with 0s for missing dates
         for i in range(6, -1, -1):
-            date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+            date = (now - timedelta(days=i)).strftime('%Y-%m-%d')
             chart_dates.append(date)
             
-            # Find if we have data for this date
-            found = False
-            for usage in daily_response_times or []:
-                if usage['date'] == date:
-                    chart_response_times.append(round(usage['avg_time'], 2))
-                    found = True
-                    break
-            
-            if not found:
+            # Check if we have data for this date
+            if date in daily_metrics_dict:
+                chart_response_times.append(daily_metrics_dict[date])
+            else:
                 chart_response_times.append(0)
         
         return jsonify({
@@ -230,7 +205,7 @@ def performance_metrics():
         })
         
     except Exception as e:
-        current_app.logger.error(f"Error getting performance metrics: {str(e)}")
+        logger.error(f"Error getting performance metrics: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
