@@ -69,14 +69,16 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Register blueprints
-    from app.routes import main, api, agents_api, vscode_api, health
-    from app.ai import mcp_routes
+    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api
+    from app.ai import mcp_routes, mcp_routes_enhanced
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp)
     app.register_blueprint(mcp_routes.bp)
+    app.register_blueprint(mcp_routes_enhanced.bp)
     app.register_blueprint(agents_api.bp)
     app.register_blueprint(vscode_api.bp)
     app.register_blueprint(health.bp)
+    app.register_blueprint(enhanced_agents_api.bp)
     
     # Initialize session ID middleware
     @app.before_request
