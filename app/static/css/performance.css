@@ -1,0 +1,165 @@
+/* ============================
+   Performance Dashboard Styles
+   ============================ */
+
+/* Main Dashboard Layout */
+.performance-dashboard {
+    padding-bottom: 2rem;
+}
+
+.performance-dashboard .page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--light-text);
+}
+
+.dark-mode .performance-dashboard .page-title {
+    color: var(--dark-text);
+}
+
+/* Token Stat Cards */
+.token-count {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--light-text);
+}
+
+.dark-mode .token-count {
+    color: var(--dark-text);
+}
+
+.total-tokens-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+.token-change {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.5rem;
+}
+
+.token-change.positive {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+}
+
+.token-change.negative {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+}
+
+.token-change.neutral {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: var(--light-text-tertiary);
+}
+
+.dark-mode .token-change.neutral {
+    color: var(--dark-text-tertiary);
+}
+
+/* Chart Containers */
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Response Time Progress Bar */
+.progress {
+    height: 8px;
+    background-color: var(--light-input);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dark-mode .progress {
+    background-color: var(--dark-input);
+}
+
+/* Table Styling */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    color: var(--light-text-secondary);
+    border-top: none;
+    white-space: nowrap;
+}
+
+.dark-mode .table th {
+    color: var(--dark-text-secondary);
+}
+
+.table td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+.dark-mode .table {
+    color: var(--dark-text);
+}
+
+.dark-mode .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+/* Period Selector */
+.btn-group-sm .btn {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    backdrop-filter: blur(4px);
+    transition: var(--transition);
+}
+
+.dark-mode #loading-overlay {
+    background-color: rgba(17, 24, 39, 0.8);
+}
+
+#loading-overlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+#loading-overlay p {
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991.98px) {
+    .chart-container {
+        height: 250px !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .token-count {
+        font-size: 1.5rem;
+    }
+    
+    .table-responsive {
+        margin-bottom: 0;
+    }
+}

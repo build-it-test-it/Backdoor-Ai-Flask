@@ -2,22 +2,21 @@
 
 {% block title %}Backdoor AI - Chat{% endblock %}
 
-{% block head %}
-<!-- No additional styles needed as they're in the main CSS file -->
-{% endblock %}
+{% set active_tab = 'chat' %}
 
 {% block content %}
 <div class="row">
+    <!-- Main Chat Area -->
     <div class="col-lg-9">
         <div class="card shadow-custom mb-4">
-            <div class="card-header">
+            <div class="card-header bg-primary">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-comments me-2"></i> Chat with Backdoor AI
                     </h5>
                     <div class="d-flex align-items-center">
-                        <div class="badge bg-primary me-2">
-                            <i class="fas fa-brain me-1"></i> Llama-3.3-70B
+                        <div class="badge bg-light text-primary fw-bold me-2">
+                            <i class="fas fa-brain me-1"></i> <span id="current-model">Llama-3.3-70B</span>
                         </div>
                     </div>
                 </div>
@@ -50,7 +49,7 @@
                                 <input type="text" id="user-input" class="form-control border-start-0" 
                                        placeholder="Ask me anything..." required autocomplete="off">
                                 <button type="submit" class="btn btn-primary px-4">
-                                    <i class="fas fa-paper-plane"></i>
+                                    <i class="fas fa-paper-plane me-1"></i>
                                 </button>
                             </div>
                         </form>
@@ -60,12 +59,13 @@
         </div>
     </div>
     
+    <!-- Sidebar -->
     <div class="col-lg-3">
         <!-- Token Usage Card -->
         <div class="card shadow-custom mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-tachometer-alt me-2"></i> Usage Stats
+                    <i class="fas fa-chart-pie me-2"></i> Usage Stats
                 </h5>
             </div>
             <div class="card-body">
@@ -95,13 +95,19 @@
                     </div>
                 </div>
                 
+                <div class="d-grid mt-3">
+                    <a href="{{ url_for('main.performance') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-1"></i> View Full Stats
+                    </a>
+                </div>
+                
                 <!-- Repository Info -->
                 <div id="repo-info" class="repo-info mt-3 d-none">
                     <div class="repo-info-header">
-                        <h5>
-                            <i class="fas fa-code-branch"></i> 
+                        <h6 class="mb-0">
+                            <i class="fas fa-code-branch me-1"></i> 
                             <span id="repo-name">Repository</span>
-                        </h5>
+                        </h6>
                     </div>
                     <p class="text-muted small mb-2" id="repo-description">Repository description</p>
                     <div class="repo-info-stats">
@@ -115,31 +121,6 @@
                             <i class="fas fa-code"></i> <span id="repo-language">Unknown</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quick Actions Card -->
-        <div class="card shadow-custom mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-bolt me-2"></i> Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" onclick="clearChat()">
-                        <i class="fas fa-eraser me-2"></i> Clear Chat
-                    </button>
-                    <a href="{{ url_for('main.download_chat') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-file-download me-2"></i> Download Chat
-                    </a>
-                    <a href="{{ url_for('main.settings') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-sliders-h me-2"></i> Settings
-                    </a>
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#repo-modal">
-                        <i class="fas fa-code-branch me-2"></i> Select Repository
-                    </button>
                 </div>
             </div>
         </div>
@@ -167,6 +148,28 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Quick Actions Card -->
+        <div class="card shadow-custom mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="clearChat()">
+                        <i class="fas fa-eraser me-2"></i> Clear Chat
+                    </button>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#repo-modal">
+                        <i class="fas fa-code-branch me-2"></i> Select Repository
+                    </button>
+                    <a href="{{ url_for('main.settings') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-sliders-h me-2"></i> Settings
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -188,10 +191,34 @@
     const tokenUsage = document.getElementById('token-usage');
     const agentStatusDot = document.getElementById('agent-status-dot');
     const agentStatusText = document.getElementById('agent-status-text');
+    const currentModelEl = document.getElementById('current-model');
     
     // Check if API key is set
     if (!apiKey) {
         apiKeyWarning.style.display = 'block';
+    }
+    
+    // Get the current model from backend
+    function updateCurrentModel() {
+        fetch('/api/current-model')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.model) {
+                    // Extract just the model name without provider prefix
+                    let modelName = data.model;
+                    if (modelName.includes('/')) {
+                        modelName = modelName.split('/').pop();
+                    }
+                    
+                    // Shorten for display if needed
+                    if (currentModelEl) {
+                        currentModelEl.textContent = modelName;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching current model:', error);
+            });
     }
     
     // Display chat history
@@ -290,6 +317,11 @@
             sidebarTypingIndicator.classList.remove('d-none');
         }
         
+        // Update token tracker state if available
+        if (window.tokenTracker) {
+            window.tokenTracker.setWaitingForResponse(true);
+        }
+        
         scrollToBottom();
     }
     
@@ -303,10 +335,16 @@
         if (sidebarTypingIndicator) {
             sidebarTypingIndicator.classList.add('d-none');
         }
+        
+        // Update token tracker state if available
+        if (window.tokenTracker) {
+            window.tokenTracker.setWaitingForResponse(false);
+        }
     }
     
     // Send message to API
     async function sendMessage(message) {
+        const startTime = Date.now();
         showTypingIndicator();
         
         try {
@@ -339,6 +377,14 @@
                 return;
             }
             
+            // Calculate response time
+            const responseTime = Date.now() - startTime;
+            
+            // Record response time in performance tracker if available
+            if (window.performanceTracker) {
+                window.performanceTracker.recordResponseTime(responseTime);
+            }
+            
             if (response.ok) {
                 // Update chat history
                 if (data.history && Array.isArray(data.history)) {
@@ -353,8 +399,9 @@
                         displayChatHistory();
                     }
                     
-                    // Update token usage
+                    // Update token usage and current model
                     updateTokenUsage();
+                    updateCurrentModel();
                 } else {
                     console.error('Invalid history data received:', data);
                     hideTypingIndicator();
@@ -409,7 +456,16 @@
                                 <span class="token-value">${usage.total_tokens.toLocaleString()}</span>
                             </div>
                         </div>
+                        <div class="token-timestamp text-muted small mt-2 text-end">
+                            Last updated: ${new Date().toLocaleTimeString()}
+                        </div>
                     `;
+                    
+                    // Update navbar token counter if available
+                    const totalTokensEl = document.getElementById('total-tokens');
+                    if (totalTokensEl) {
+                        totalTokensEl.textContent = usage.total_tokens.toLocaleString();
+                    }
                 }
             })
             .catch(error => {
@@ -425,51 +481,48 @@
                 if (data.success && data.status) {
                     const status = data.status;
                     
-                    // Update status indicator in navbar
-                    const navbarStatus = document.getElementById('agent-status');
-                    if (navbarStatus) {
-                        if (status.ready) {
-                            navbarStatus.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Ready</span>';
-                        } else if (!status.api_key_set) {
-                            navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i>API Key Missing</span>';
-                        } else if (!status.initialized) {
-                            navbarStatus.innerHTML = '<span class="badge bg-warning"><i class="fas fa-sync fa-spin me-1"></i>Initializing</span>';
-                        } else {
-                            navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Not Ready</span>';
-                        }
-                    }
-                    
-                    // Update status in sidebar
-                    if (agentStatusDot && agentStatusText) {
-                        if (status.ready) {
-                            agentStatusDot.className = 'agent-status-dot ready';
-                            agentStatusText.textContent = 'Agent is ready';
-                            
-                            // Hide typing indicator in sidebar when not actively processing
-                            const sidebarTypingIndicator = document.getElementById('typing-indicator');
-                            if (sidebarTypingIndicator) {
-                                sidebarTypingIndicator.classList.add('d-none');
+                    // Check if token tracker is available
+                    if (window.tokenTracker) {
+                        window.tokenTracker.agentStatus = status;
+                        window.tokenTracker.updateAgentStatusDisplay();
+                    } else {
+                        // Fallback if token tracker is not available
+                        
+                        // Update status indicator in navbar
+                        const navbarStatus = document.getElementById('agent-status');
+                        if (navbarStatus) {
+                            if (status.ready) {
+                                navbarStatus.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Ready</span>';
+                            } else if (!status.api_key_set) {
+                                navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-circle me-1"></i>API Key Missing</span>';
+                            } else if (!status.initialized) {
+                                navbarStatus.innerHTML = '<span class="badge bg-warning"><i class="fas fa-sync fa-spin me-1"></i>Initializing</span>';
+                            } else {
+                                navbarStatus.innerHTML = '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Not Ready</span>';
                             }
-                        } else if (!status.api_key_set) {
-                            agentStatusDot.className = 'agent-status-dot error';
-                            agentStatusText.textContent = 'API Key Missing';
-                        } else if (!status.initialized) {
-                            agentStatusDot.className = 'agent-status-dot';
-                            agentStatusText.textContent = 'Initializing...';
-                        } else {
-                            agentStatusDot.className = 'agent-status-dot error';
-                            agentStatusText.textContent = 'Agent is not ready';
                         }
-                    }
-                    
-                    // Update token usage display
-                    if (status.token_usage) {
-                        const usage = status.token_usage;
-                        const tokenValues = document.querySelectorAll('.token-value');
-                        if (tokenValues.length >= 3) {
-                            tokenValues[0].textContent = usage.prompt_tokens.toLocaleString();
-                            tokenValues[1].textContent = usage.completion_tokens.toLocaleString();
-                            tokenValues[2].textContent = usage.total_tokens.toLocaleString();
+                        
+                        // Update status in sidebar
+                        if (agentStatusDot && agentStatusText) {
+                            if (status.ready) {
+                                agentStatusDot.className = 'agent-status-dot ready';
+                                agentStatusText.textContent = 'Agent is ready';
+                                
+                                // Hide typing indicator in sidebar when not actively processing
+                                const sidebarTypingIndicator = document.getElementById('typing-indicator');
+                                if (sidebarTypingIndicator) {
+                                    sidebarTypingIndicator.classList.add('d-none');
+                                }
+                            } else if (!status.api_key_set) {
+                                agentStatusDot.className = 'agent-status-dot error';
+                                agentStatusText.textContent = 'API Key Missing';
+                            } else if (!status.initialized) {
+                                agentStatusDot.className = 'agent-status-dot';
+                                agentStatusText.textContent = 'Initializing...';
+                            } else {
+                                agentStatusDot.className = 'agent-status-dot error';
+                                agentStatusText.textContent = 'Agent is not ready';
+                            }
                         }
                     }
                 }
@@ -496,7 +549,7 @@
             
             // Add welcome message
             const timestamp = new Date().toLocaleString();
-            const welcomeMessage = "Hello! I'm Backdoor AI, your assistant for the Backdoor app. I can help you with app signing, source management, and other app-related tasks. How can I assist you today?";
+            const welcomeMessage = "Hello! I'm Backdoor AI, your intelligent assistant. I can help with code analysis, app development, and understanding repositories. How can I assist you today?";
             
             // Add to UI
             addMessageToUI('assistant', welcomeMessage, timestamp);
@@ -580,7 +633,7 @@
         // Add welcome message if history is empty
         if (chatHistory.length === 0) {
             const timestamp = new Date().toLocaleString();
-            const welcomeMessage = "Hello! I'm Backdoor AI, your assistant for the Backdoor app. I can help you with app signing, source management, and other app-related tasks. How can I assist you today?";
+            const welcomeMessage = "Hello! I'm Backdoor AI, your intelligent assistant. I can help with code analysis, app development, and understanding repositories. How can I assist you today?";
             
             // Add to UI
             addMessageToUI('assistant', welcomeMessage, timestamp);
@@ -598,6 +651,9 @@
         
         // Initialize agent status
         updateAgentStatus();
+        
+        // Get current model
+        updateCurrentModel();
         
         // Set up polling for agent status and token usage
         setInterval(updateAgentStatus, 10000); // Every 10 seconds

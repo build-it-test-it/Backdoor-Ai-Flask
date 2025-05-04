@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Performance - Backdoor AI{% endblock %}
+
+{% block content %}
+<div class="performance-dashboard">
+    <h1 class="page-title">
+        <i class="fas fa-tachometer-alt me-2"></i>Performance Dashboard
+    </h1>
+    
+    <div class="row mt-4">
+        <!-- Token Usage Stats Cards -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-arrow-right text-primary me-2"></i>Prompt Tokens</h5>
+                    <div class="d-flex align-items-center">
+                        <h2 class="token-count mb-0" id="prompt-tokens">-</h2>
+                        <div class="ms-auto">
+                            <span class="badge rounded-pill token-change" id="prompt-tokens-change">-</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-0">Tokens spent on prompts</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-arrow-left text-success me-2"></i>Completion Tokens</h5>
+                    <div class="d-flex align-items-center">
+                        <h2 class="token-count mb-0" id="completion-tokens">-</h2>
+                        <div class="ms-auto">
+                            <span class="badge rounded-pill token-change" id="completion-tokens-change">-</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-0">Tokens returned in responses</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body total-tokens-card">
+                    <h5 class="card-title"><i class="fas fa-calculator me-2"></i>Total Tokens</h5>
+                    <div class="d-flex align-items-center">
+                        <h2 class="token-count mb-0" id="total-tokens-display">-</h2>
+                        <div class="ms-auto">
+                            <span class="badge rounded-pill token-change" id="total-tokens-change">-</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-0">Total tokens consumed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Token Usage Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Token Usage Over Time</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-period="7">7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="30">30 Days</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:300px;">
+                        <canvas id="tokenUsageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Response Time & Model Distribution -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Average Response Time</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <h2 class="mb-0" id="avg-response-time">-</h2>
+                        <small class="ms-2">seconds</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" id="response-time-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Model Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:180px;">
+                        <canvas id="modelDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Usage Table -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Usage</h5>
+                    <button class="btn btn-sm btn-outline-secondary" id="refresh-btn">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Model</th>
+                                    <th>Prompt</th>
+                                    <th>Completion</th>
+                                    <th>Total</th>
+                                    <th>Response Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-usage-table">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loading-overlay" class="d-none">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading performance data...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/performance.js') }}"></script>
+{% endblock %}
