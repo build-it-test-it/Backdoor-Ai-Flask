@@ -101,6 +101,7 @@ def index():
     agent_status = model_service.get_status()
     
     return render_template('index.html', 
+                          active_tab='chat',
                           chat_history=chat_history,
                           together_api_key=together_api_key,
                           github_token=github_token,
@@ -117,7 +118,7 @@ def index():
 @bp.route('/mentat-integration')
 def mentat_integration():
     """Documentation page for Mentat integration features."""
-    return render_template('mentat_integration.html')
+    return render_template('mentat_integration.html', active_tab='integrations')
 
 @bp.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -331,6 +332,17 @@ def settings():
         repo_info = github_service.get_repo_info(current_repo)
     else:
         repo_info = None
+        
+    return render_template('settings.html', 
+                          active_tab='settings',
+                          llm_provider=llm_provider,
+                          together_api_key=together_api_key,
+                          github_token=github_token,
+                          github_status=github_status,
+                          current_repo=current_repo,
+                          repo_info=repo_info)
+
+@bp.route('/download-chat')
 def download_chat():
     session_id = session.get('session_id')
     if not session_id:
