@@ -176,6 +176,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message p-3 mb-3`;
         
+        // Ensure content is a string
+        if (content === null || content === undefined) {
+            content = '';
+        }
+        
+        if (typeof content !== 'string') {
+            content = String(content);
+        }
+        
         // Convert markdown to HTML if it's an assistant message
         if (sender === 'assistant') {
             content = marked.parse(content);

@@ -289,7 +289,7 @@ class TogetherAIService:
         
         # Extract the assistant's response
         assistant_response = response_data.get('choices', [{}])[0].get('message', {})
-        assistant_message = assistant_response.get('content', '')
+        assistant_message = assistant_response.get('content') or ''  # Ensure we never have None
         tool_calls = assistant_response.get('tool_calls', [])
         
         # Add user message to history

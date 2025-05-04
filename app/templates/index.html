@@ -233,6 +233,15 @@
             messageDiv.appendChild(iconSpan);
         }
         
+        // Ensure content is a string
+        if (content === null || content === undefined) {
+            content = '';
+        }
+        
+        if (typeof content !== 'string') {
+            content = String(content);
+        }
+        
         // Format content with markdown for assistant messages
         if (role === 'assistant') {
             contentDiv.classList.add('markdown-content');
@@ -319,36 +328,53 @@
                 })
             });
             
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error('Error parsing JSON response:', jsonError);
+                hideTypingIndicator();
+                const timestamp = new Date().toLocaleString();
+                addMessageToUI('assistant', `Error: Could not parse server response. Please try again.`, timestamp);
+                return;
+            }
             
             if (response.ok) {
                 // Update chat history
-                chatHistory = data.history;
-                
-                // Hide typing indicator
-                hideTypingIndicator();
-                
-                // Display the new messages (should be the last two in the history)
-                if (chatHistory.length >= 2) {
-                    // Clear existing messages and display full history
-                    displayChatHistory();
+                if (data.history && Array.isArray(data.history)) {
+                    chatHistory = data.history;
+                    
+                    // Hide typing indicator
+                    hideTypingIndicator();
+                    
+                    // Display the new messages (should be the last two in the history)
+                    if (chatHistory.length >= 2) {
+                        // Clear existing messages and display full history
+                        displayChatHistory();
+                    }
+                    
+                    // Update token usage
+                    updateTokenUsage();
+                } else {
+                    console.error('Invalid history data received:', data);
+                    hideTypingIndicator();
+                    const timestamp = new Date().toLocaleString();
+                    addMessageToUI('assistant', `Error: Invalid response from server. Please try again.`, timestamp);
                 }
-                
-                // Update token usage
-                updateTokenUsage();
             } else {
                 hideTypingIndicator();
                 
                 // Show error message
                 const timestamp = new Date().toLocaleString();
-                addMessageToUI('assistant', `Error: ${data.error}`, timestamp);
+                const errorMessage = data.error || 'Unknown error occurred';
+                addMessageToUI('assistant', `Error: ${errorMessage}`, timestamp);
             }
         } catch (error) {
             hideTypingIndicator();
             
             // Show error message
             const timestamp = new Date().toLocaleString();
-            addMessageToUI('assistant', `Error: ${error.message}`, timestamp);
+            addMessageToUI('assistant', `Error: ${error.message || 'Unknown error occurred'}`, timestamp);
         }
     }
     
