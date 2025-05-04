@@ -11,32 +11,32 @@ import sys
 bp = Blueprint('main', __name__)
 
 # Initialize the OpenHands environment
-def init_openhands_env():
-    """Initialize the OpenHands environment variables and settings."""
-    os.environ['OPENHANDS_VERSION'] = '2.0.0'
-    os.environ['OPENHANDS_ENV'] = 'production'
-    os.environ['OPENHANDS_PLATFORM'] = platform.system()
-    os.environ['OPENHANDS_PYTHON_VERSION'] = platform.python_version()
-    os.environ['OPENHANDS_SYSTEM_VERSION'] = platform.version()
-    os.environ['OPENHANDS_MACHINE'] = platform.machine()
-    os.environ['OPENHANDS_NODE'] = platform.node()
-    os.environ['OPENHANDS_RELEASE'] = platform.release()
-    os.environ['OPENHANDS_PROCESSOR'] = platform.processor()
+def init_backdoor_env():
+    """Initialize the Backdoor environment variables and settings."""
+    os.environ['BACKDOOR_VERSION'] = '2.0.0'
+    os.environ['BACKDOOR_ENV'] = 'production'
+    os.environ['BACKDOOR_PLATFORM'] = platform.system()
+    os.environ['BACKDOOR_PYTHON_VERSION'] = platform.python_version()
+    os.environ['BACKDOOR_SYSTEM_VERSION'] = platform.version()
+    os.environ['BACKDOOR_MACHINE'] = platform.machine()
+    os.environ['BACKDOOR_NODE'] = platform.node()
+    os.environ['BACKDOOR_RELEASE'] = platform.release()
+    os.environ['BACKDOOR_PROCESSOR'] = platform.processor()
     
     # Create necessary directories
-    os.makedirs('/tmp/openhands', exist_ok=True)
-    os.makedirs('/tmp/openhands/tools', exist_ok=True)
-    os.makedirs('/tmp/openhands/cache', exist_ok=True)
-    os.makedirs('/tmp/openhands/logs', exist_ok=True)
+    os.makedirs('/tmp/backdoor', exist_ok=True)
+    os.makedirs('/tmp/backdoor/tools', exist_ok=True)
+    os.makedirs('/tmp/backdoor/cache', exist_ok=True)
+    os.makedirs('/tmp/backdoor/logs', exist_ok=True)
     
-    # Create a marker file to indicate OpenHands is initialized
-    with open('/tmp/openhands/initialized', 'w') as f:
-        f.write(f"OpenHands initialized at {datetime.now().isoformat()}")
+    # Create a marker file to indicate Backdoor is initialized
+    with open('/tmp/backdoor/initialized', 'w') as f:
+        f.write(f"Backdoor initialized at {datetime.now().isoformat()}")
     
     return True
 
 # Initialize OpenHands environment
-init_openhands_env()
+init_backdoor_env()
 
 @bp.route('/')
 def index():

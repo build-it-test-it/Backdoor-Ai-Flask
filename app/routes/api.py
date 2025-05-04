@@ -550,7 +550,8 @@ def update_settings():
 @bp.route('/execute_bash', methods=['POST'])
 def execute_bash():
     """Execute a bash command and return the result."""
-    from app.ai.tools import tool_registry
+    from app.ai.mcp_tool_handler import mcp_tool_handler
+    from app.ai.mcp_agents import agent_manager
     
     data = request.json
     
@@ -564,15 +565,27 @@ def execute_bash():
     # Get is_input flag
     is_input = data.get('is_input', 'false')
     
-    # Execute the command
-    result = tool_registry.execute_tool('execute_bash', command=command, is_input=is_input)
+    # Get session ID
+    session_id = session.get('session_id')
+    
+    # Execute the command through the MCP tool handler
+    # This ensures proper tracking and permission checking
+    result = mcp_tool_handler.execute_tool(
+        tool_type='execute_bash',
+        session_id=session_id,
+        command=command,
+        is_input=is_input
+    )
     
     return jsonify(result)
 
 @bp.route('/file', methods=['GET', 'POST', 'PUT'])
 def file_operations():
     """Handle file operations."""
-    from app.ai.tools import tool_registry
+    from app.ai.mcp_tool_handler import mcp_tool_handler
+    
+    # Get session ID
+    session_id = session.get('session_id')
     
     if request.method == 'GET':
         # View a file or directory
@@ -589,7 +602,14 @@ def file_operations():
             except json.JSONDecodeError:
                 view_range = None
         
-        result = tool_registry.execute_tool('str_replace_editor', command='view', path=path, view_range=view_range)
+        # Execute through MCP tool handler
+        result = mcp_tool_handler.execute_tool(
+            tool_type='str_replace_editor',
+            session_id=session_id,
+            command='view',
+            path=path,
+            view_range=view_range
+        )
         return jsonify(result)
     
     elif request.method == 'POST':
@@ -608,7 +628,14 @@ def file_operations():
                 'error': 'File text is required'
             }), 400
         
-        result = tool_registry.execute_tool('str_replace_editor', command='create', path=path, file_text=file_text)
+        # Execute through MCP tool handler
+        result = mcp_tool_handler.execute_tool(
+            tool_type='str_replace_editor',
+            session_id=session_id,
+            command='create',
+            path=path,
+            file_text=file_text
+        )
         return jsonify(result)
     
     elif request.method == 'PUT':
@@ -636,7 +663,15 @@ def file_operations():
             
             new_str = data.get('new_str', '')
             
-            result = tool_registry.execute_tool('str_replace_editor', command=command, path=path, old_str=old_str, new_str=new_str)
+            # Execute through MCP tool handler
+            result = mcp_tool_handler.execute_tool(
+                tool_type='str_replace_editor',
+                session_id=session_id,
+                command=command,
+                path=path,
+                old_str=old_str,
+                new_str=new_str
+            )
         
         elif command == 'insert':
             insert_line = data.get('insert_line')

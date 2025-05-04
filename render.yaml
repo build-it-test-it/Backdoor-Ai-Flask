@@ -3,8 +3,17 @@ services:
     name: backdoor-ai
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app
+    buildCommand: |
+      # Install system dependencies for code-server
+      apt-get update && apt-get install -y curl wget git gnupg build-essential
+      # Install code-server
+      curl -fsSL https://code-server.dev/install.sh | sh
+      # Install Python dependencies
+      pip install -r requirements.txt
+      # Run database migrations
+      python -m flask db upgrade
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 wsgi:app
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
@@ -14,3 +23,42 @@ services:
         sync: false
       - key: GITHUB_TOKEN
         sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backdoor-db
+          property: connectionString
+      - key: MCP_ENABLED
+        value: "true"
+      - key: MCP_LOG_LEVEL
+        value: "INFO"
+      - key: VSCODE_SERVER_PATH
+        value: "/usr/bin/code-server"
+      - key: BACKDOOR_ENV
+        value: "production"
+    healthCheckPath: /api/health
+  
+  - type: postgres
+    name: backdoor-db
+    plan: free
+    ipAllowList: []
+    postgresMajorVersion: 14
+
+databases:
+  - name: backdoor-db
+    plan: free
+    postgresMajorVersion: 14
+
+# Ensure the PostgreSQL cluster is created before the web service
+preBootScript: |
+  #!/bin/bash
+  set -e
+  echo "Creating necessary directories..."
+  mkdir -p /tmp/backdoor/tools
+  mkdir -p /tmp/backdoor/cache
+  mkdir -p /tmp/backdoor/logs
+  mkdir -p /tmp/backdoor/data
+  mkdir -p /tmp/backdoor/config
+  mkdir -p /tmp/backdoor/vscode/workspaces
+  mkdir -p /tmp/backdoor/vscode/sessions
+  echo "Backdoor initialized at $(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/backdoor/initialized
+  echo "Pre-boot initialization complete!"

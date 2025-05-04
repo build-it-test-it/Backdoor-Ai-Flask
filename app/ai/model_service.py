@@ -10,6 +10,9 @@ from typing import Any, Dict, List, Optional, Union
 from app.ai.context_provider import context_provider
 from app.ai.behavior_tracker import behavior_tracker
 from app.ai.tools import tool_registry
+from app.ai.mcp_server import mcp_server
+from app.ai.mcp_tool_handler import mcp_tool_handler
+from app.ai.mcp_agents import agent_manager, AgentRole
 
 class TogetherAIService:
     """Service for interacting with Together AI's API, inspired by OpenHands LLM implementation"""
@@ -67,14 +70,14 @@ class TogetherAIService:
         api_key = self.get_api_key()
         
         # Check if OpenHands is initialized
-        openhands_initialized = os.path.exists('/tmp/openhands/initialized')
+        backdoor_initialized = os.path.exists('/tmp/backdoor/initialized')
         
         # Get token usage
         token_usage = self.get_token_usage()
         
         return {
-            "ready": self.ready and openhands_initialized and bool(api_key),
-            "initialized": self.initialized and openhands_initialized,
+            "ready": self.ready and backdoor_initialized and bool(api_key),
+            "initialized": self.initialized and backdoor_initialized,
             "api_key_set": bool(api_key),
             "model": self.get_model(),
             "token_usage": token_usage,
@@ -220,8 +223,34 @@ class TogetherAIService:
         if chat_history is None:
             chat_history = self.load_chat_history()
         
+        # Use the MCP server for enhanced context management if available
         if context is None:
-            context = context_provider.get_full_context()
+            try:
+                # First try to get context from MCP server
+                mcp_context = mcp_server.get_full_context()
+                # Merge with traditional context
+                standard_context = context_provider.get_full_context()
+                
+                # Use MCP context but fall back to standard values if needed
+                context = standard_context
+                if mcp_context and 'context' in mcp_context:
+                    for context_type, items in mcp_context['context'].items():
+                        if items:  # Only use non-empty context lists
+                            # Map MCP context types to standard context structure
+                            if context_type == 'user_info' and items:
+                                context['user_info'] = items[0]  # Use most recent
+                            elif context_type == 'behavior' and items:
+                                context['recent_behaviors'] = items
+                            elif context_type == 'interaction' and items:
+                                context['recent_interactions'] = items
+                            elif context_type == 'github' and items:
+                                context['github_info'] = items[0]  # Use most recent
+                            elif context_type == 'environment' and items:
+                                context['environment_info'] = items[0]  # Use most recent
+                
+            except Exception as e:
+                print(f"Error getting MCP context: {str(e)}")
+                context = context_provider.get_full_context()
         
         # Format messages for the API
         messages = []
@@ -257,9 +286,18 @@ class TogetherAIService:
             'content': user_message
         })
         
-        # Record user behavior
+        # Record user behavior in both systems for backwards compatibility
+        # The MCP server provides enhanced context tracking
         try:
+            # Track in the behavior tracker (legacy)
             behavior_tracker.record_behavior(
+                action="chat",
+                screen=context.get("current_screen", {}).get("screen_name", "Unknown"),
+                details={"message": user_message}
+            )
+            
+            # Also track in the MCP server (new system)
+            mcp_server.record_user_behavior(
                 action="chat",
                 screen=context.get("current_screen", {}).get("screen_name", "Unknown"),
                 details={"message": user_message}
@@ -268,9 +306,14 @@ class TogetherAIService:
             # Log but continue if behavior tracking fails
             print(f"Error tracking behavior: {str(e)}")
         
-        # Get tool schemas
+        # Get tool schemas from MCP tool handler
         try:
-            tools = tool_registry.get_tool_schemas()
+            # Use MCP tool handler to get tool schemas
+            tools = mcp_tool_handler.get_tools_schema()
+            
+            # If empty, fall back to the direct tool registry as a backup
+            if not tools:
+                tools = tool_registry.get_tool_schemas()
         except Exception as e:
             # Default to no tools if there's an error
             print(f"Error getting tool schemas: {str(e)}")
@@ -379,12 +422,23 @@ class TogetherAIService:
             # Continue anyway - it's better to return a response with unsaved history
             # than to fail the entire request
         
-        # Record the interaction for learning
+        # Record the interaction for learning in both systems
+        # Legacy behavior tracker
         interaction = behavior_tracker.record_interaction(
             user_message=user_message,
             ai_response=assistant_message,
             context=context
         )
+        
+        # Also record in the MCP server for enhanced context
+        try:
+            mcp_server.record_interaction(
+                user_message=user_message,
+                ai_response=assistant_message,
+                context=context
+            )
+        except Exception as e:
+            print(f"Error recording interaction in MCP server: {str(e)}")
         
         # Process tool calls if present
         tool_results = []
@@ -395,8 +449,25 @@ class TogetherAIService:
                 tool_name = function.get('name')
                 tool_args = json.loads(function.get('arguments', '{}'))
                 
-                # Execute the tool
-                tool_result = tool_registry.execute_tool(tool_name, **tool_args)
+                # Execute the tool through MCP tool handler
+                session_id = session.get('session_id')
+                
+                # Try to get or create an agent for this session
+                agent = agent_manager.get_default_agent(session_id)
+                if not agent:
+                    # Create a new agent for this session
+                    agent = agent_manager.create_agent(
+                        name="Tool Assistant",
+                        role=AgentRole.ASSISTANT,
+                        session_id=session_id
+                    )
+                
+                # Execute tool through MCP with this agent
+                tool_result = mcp_tool_handler.execute_tool(
+                    tool_type=tool_name,
+                    agent_id=agent.id,
+                    **tool_args
+                )
                 
                 # Add tool result to history
                 tool_result_msg = {
