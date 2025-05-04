@@ -13,8 +13,43 @@ def create_app():
     # Configure app
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
+        
+        # LLM API keys
         TOGETHER_API_KEY=os.environ.get('TOGETHER_API_KEY', ''),
+        TOGETHER_MODEL=os.environ.get('TOGETHER_MODEL', 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free'),
+        TOGETHER_API_BASE=os.environ.get('TOGETHER_API_BASE', 'https://api.together.xyz/v1'),
+        
+        OPENAI_API_KEY=os.environ.get('OPENAI_API_KEY', ''),
+        OPENAI_MODEL=os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo'),
+        OPENAI_API_BASE=os.environ.get('OPENAI_API_BASE', 'https://api.openai.com/v1'),
+        
+        ANTHROPIC_API_KEY=os.environ.get('ANTHROPIC_API_KEY', ''),
+        ANTHROPIC_MODEL=os.environ.get('ANTHROPIC_MODEL', 'claude-3-haiku-20240307'),
+        ANTHROPIC_API_BASE=os.environ.get('ANTHROPIC_API_BASE', 'https://api.anthropic.com/v1'),
+        
+        GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY', ''),
+        GOOGLE_MODEL=os.environ.get('GOOGLE_MODEL', 'gemini-pro'),
+        GOOGLE_API_BASE=os.environ.get('GOOGLE_API_BASE', 'https://generativelanguage.googleapis.com/v1beta'),
+        
+        MISTRAL_API_KEY=os.environ.get('MISTRAL_API_KEY', ''),
+        MISTRAL_MODEL=os.environ.get('MISTRAL_MODEL', 'mistral-small'),
+        MISTRAL_API_BASE=os.environ.get('MISTRAL_API_BASE', 'https://api.mistral.ai/v1'),
+        
+        COHERE_API_KEY=os.environ.get('COHERE_API_KEY', ''),
+        COHERE_MODEL=os.environ.get('COHERE_MODEL', 'command'),
+        COHERE_API_BASE=os.environ.get('COHERE_API_BASE', 'https://api.cohere.ai/v1'),
+        
+        CUSTOM_API_KEY=os.environ.get('CUSTOM_API_KEY', ''),
+        CUSTOM_MODEL=os.environ.get('CUSTOM_MODEL', ''),
+        CUSTOM_API_BASE=os.environ.get('CUSTOM_API_BASE', ''),
+        
+        # Default LLM provider
+        LLM_PROVIDER=os.environ.get('LLM_PROVIDER', 'together'),
+        
+        # GitHub token
         GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN', ''),
+        
+        # App configuration
         CHAT_HISTORY_DIR=os.path.join('/tmp', 'chat_history'),
         MCP_ENABLED=os.environ.get('MCP_ENABLED', 'true').lower() == 'true',
         MCP_LOG_LEVEL=os.environ.get('MCP_LOG_LEVEL', 'INFO'),
@@ -22,6 +57,8 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         BACKDOOR_VERSION='2.0.0',
         BACKDOOR_ENV=os.environ.get('BACKDOOR_ENV', 'production'),
+        
+        # System information
         BACKDOOR_PLATFORM=platform.system(),
         BACKDOOR_PYTHON_VERSION=platform.python_version(),
         BACKDOOR_SYSTEM_VERSION=platform.version(),
@@ -29,6 +66,13 @@ def create_app():
         BACKDOOR_NODE=platform.node(),
         BACKDOOR_RELEASE=platform.release(),
         BACKDOOR_PROCESSOR=platform.processor(),
+        
+        # Docker configuration
+        BACKDOOR_DOCKER_ENABLED=os.environ.get('BACKDOOR_DOCKER_ENABLED', 'true').lower() == 'true',
+        BACKDOOR_DOCKER_IMAGE=os.environ.get('BACKDOOR_DOCKER_IMAGE', 'backdoor/runtime:latest'),
+        BACKDOOR_DOCKER_NETWORK=os.environ.get('BACKDOOR_DOCKER_NETWORK', 'backdoor-network'),
+        
+        # Directory paths
         BACKDOOR_TOOLS_DIR=os.path.join('/tmp', 'backdoor', 'tools'),
         BACKDOOR_CACHE_DIR=os.path.join('/tmp', 'backdoor', 'cache'),
         BACKDOOR_LOGS_DIR=os.path.join('/tmp', 'backdoor', 'logs'),
@@ -70,7 +114,7 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Register blueprints
-    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api, code_agent_api
+    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api, code_agent_api, backdoor_api
     from app.ai import mcp_routes, mcp_routes_enhanced
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp)
@@ -81,6 +125,7 @@ def create_app():
     app.register_blueprint(health.bp)
     app.register_blueprint(enhanced_agents_api.bp)
     app.register_blueprint(code_agent_api.bp)
+    app.register_blueprint(backdoor_api.bp)
     
     # Initialize session ID middleware
     @app.before_request
