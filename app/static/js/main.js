@@ -73,13 +73,24 @@ function copyToClipboard(text) {
 }
 
 // Helper function to show a toast notification
-function showToast(message, type = 'success') {
+function showToast(message, detail = '', type = 'success') {
     // Create toast container if it doesn't exist
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
         document.body.appendChild(toastContainer);
+    }
+    
+    // Determine icon based on type
+    let iconClass = 'fas fa-check-circle';
+    if (type === 'warning') {
+        iconClass = 'fas fa-exclamation-triangle';
+    } else if (type === 'danger' || type === 'error') {
+        type = 'danger'; // normalize error to danger for Bootstrap
+        iconClass = 'fas fa-exclamation-circle';
+    } else if (type === 'info') {
+        iconClass = 'fas fa-info-circle';
     }
     
     // Create toast element
@@ -89,21 +100,31 @@ function showToast(message, type = 'success') {
     toastEl.setAttribute('aria-live', 'assertive');
     toastEl.setAttribute('aria-atomic', 'true');
     
-    // Create toast content
-    toastEl.innerHTML = `
+    // Create toast content with icon and optional detail
+    let toastContent = `
         <div class="d-flex">
             <div class="toast-body">
-                ${message}
+                <i class="${iconClass} me-2"></i>${message}
+    `;
+    
+    // Add detail if provided
+    if (detail) {
+        toastContent += `<div class="mt-1 small">${detail}</div>`;
+    }
+    
+    toastContent += `
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
     
+    toastEl.innerHTML = toastContent;
+    
     // Add to container
     toastContainer.appendChild(toastEl);
     
     // Initialize and show the toast
-    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
     toast.show();
     
     // Remove toast after it's hidden

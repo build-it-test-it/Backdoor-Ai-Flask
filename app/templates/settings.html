@@ -2,6 +2,11 @@
 
 {% block title %}Backdoor AI - Settings{% endblock %}
 
+{% block head %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/ollama.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
@@ -14,42 +19,156 @@
             <div class="card-body">
                 <form method="post" id="settings-form">
                     <div class="mb-4">
-                        <label for="together_api_key" class="form-label fw-bold">
-                            <i class="fas fa-key text-primary me-2"></i>Together AI API Key
+                        <label for="llm_provider" class="form-label fw-bold">
+                            <i class="fas fa-server text-primary me-2"></i>LLM Provider
                         </label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
-                            <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
-                                   value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
-                            <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <div class="form-text mt-2">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Required to use the AI models. 
-                            Get your API key from <a href="https://together.ai" target="_blank" class="text-decoration-none">Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>.
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="model_name" class="form-label fw-bold">
-                            <i class="fas fa-brain text-primary me-2"></i>AI Model
-                        </label>
-                        <select class="form-select" id="model_name" name="model_name">
-                            <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" {{ 'selected' if model_name == 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' else '' }}>
-                                Llama-3.3-70B-Instruct-Turbo-Free (Recommended)
+                        <select class="form-select" id="llm_provider" name="llm_provider">
+                            <option value="together" {{ 'selected' if llm_provider == 'together' or llm_provider is not defined else '' }}>
+                                Together AI (Cloud)
                             </option>
-                            <option value="meta-llama/Llama-3.1-8B-Instruct" {{ 'selected' if model_name == 'meta-llama/Llama-3.1-8B-Instruct' else '' }}>
-                                Llama-3.1-8B-Instruct (Faster)
-                            </option>
-                            <option value="mistralai/Mixtral-8x7B-Instruct-v0.1" {{ 'selected' if model_name == 'mistralai/Mixtral-8x7B-Instruct-v0.1' else '' }}>
-                                Mixtral-8x7B-Instruct-v0.1
+                            <option value="ollama" {{ 'selected' if llm_provider == 'ollama' else '' }}>
+                                Ollama (Local)
                             </option>
                         </select>
                         <div class="form-text mt-2">
                             <i class="fas fa-info-circle me-1"></i>
-                            Select the AI model to use for chat. Llama-3.3-70B offers the best quality responses.
+                            Choose between cloud-based AI models or run models locally on your machine.
+                        </div>
+                    </div>
+                    
+                    <!-- Together AI Settings -->
+                    <div id="together-settings" class="{{ 'd-none' if llm_provider == 'ollama' else '' }}">
+                        <div class="mb-4">
+                            <label for="together_api_key" class="form-label fw-bold">
+                                <i class="fas fa-key text-primary me-2"></i>Together AI API Key
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="together_api_key" name="together_api_key" 
+                                       value="{{ together_api_key }}" placeholder="Enter your Together AI API key">
+                                <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Required to use the AI models. 
+                                Get your API key from <a href="https://together.ai" target="_blank" class="text-decoration-none">Together AI <i class="fas fa-external-link-alt fa-xs"></i></a>.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="model_name" class="form-label fw-bold">
+                                <i class="fas fa-brain text-primary me-2"></i>AI Model
+                            </label>
+                            <select class="form-select" id="model_name" name="model_name">
+                                <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" {{ 'selected' if model_name == 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' else '' }}>
+                                    Llama-3.3-70B-Instruct-Turbo-Free (Recommended)
+                                </option>
+                                <option value="meta-llama/Llama-3.1-8B-Instruct" {{ 'selected' if model_name == 'meta-llama/Llama-3.1-8B-Instruct' else '' }}>
+                                    Llama-3.1-8B-Instruct (Faster)
+                                </option>
+                                <option value="mistralai/Mixtral-8x7B-Instruct-v0.1" {{ 'selected' if model_name == 'mistralai/Mixtral-8x7B-Instruct-v0.1' else '' }}>
+                                    Mixtral-8x7B-Instruct-v0.1
+                                </option>
+                            </select>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select the AI model to use for chat. Llama-3.3-70B offers the best quality responses.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ollama Settings -->
+                    <div id="ollama-settings" class="{{ 'd-none' if llm_provider != 'ollama' else '' }}">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-bold mb-0">
+                                    <i class="fas fa-desktop text-primary me-2"></i>Ollama Status
+                                </label>
+                                <button type="button" id="refresh-ollama-status" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <div class="card">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div><strong>Installed:</strong> <span id="ollama-installed">Checking...</span></div>
+                                            <div><strong>Running:</strong> <span id="ollama-running">Checking...</span></div>
+                                        </div>
+                                        <div>
+                                            <button type="button" id="install-ollama" class="btn btn-success btn-sm me-2 d-none">
+                                                <i class="fas fa-download"></i> Install
+                                            </button>
+                                            <button type="button" id="start-ollama" class="btn btn-primary btn-sm d-none">
+                                                <i class="fas fa-play"></i> Start
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Ollama lets you run LLMs locally on your machine.
+                                <a href="https://ollama.com/download" target="_blank" class="text-decoration-none">Learn more <i class="fas fa-external-link-alt fa-xs"></i></a>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="ollama_api_base" class="form-label fw-bold">
+                                <i class="fas fa-link text-primary me-2"></i>Ollama API URL
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-link"></i></span>
+                                <input type="text" class="form-control" id="ollama_api_base" name="ollama_api_base"
+                                       value="{{ ollama_api_base|default('http://localhost:11434') }}" placeholder="http://localhost:11434">
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                The URL where Ollama is running. Default is http://localhost:11434
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="ollama_model" class="form-label fw-bold mb-0">
+                                    <i class="fas fa-brain text-primary me-2"></i>Ollama Model
+                                </label>
+                                <button type="button" id="refresh-ollama-models" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-sync-alt"></i> Refresh Models
+                                </button>
+                            </div>
+                            <select class="form-select mb-2" id="ollama_model" name="ollama_model">
+                                <option value="" disabled selected>Loading models...</option>
+                            </select>
+                            <div class="form-text mb-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select a local model to use. Recommended: llama4:latest
+                            </div>
+                            <div id="model-actions" class="mt-2">
+                                <button type="button" id="download-model" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Download Selected Model
+                                </button>
+                                <div class="progress mt-2 d-none" id="download-progress-container">
+                                    <div id="download-progress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                                        Downloading...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <button type="button" id="test-ollama-model" class="btn btn-outline-success">
+                                <i class="fas fa-vial"></i> Test Model
+                            </button>
+                            <div id="test-result" class="mt-2 d-none">
+                                <div class="alert alert-info">
+                                    <strong>Test Result:</strong>
+                                    <div id="test-output">...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -223,6 +342,24 @@
         const githubConnectionStatus = document.getElementById('github-connection-status');
         const repoInfoSettings = document.getElementById('repo-info-settings');
         
+        // Ollama elements
+        const llmProviderSelect = document.getElementById('llm_provider');
+        const togetherSettings = document.getElementById('together-settings');
+        const ollamaSettings = document.getElementById('ollama-settings');
+        const refreshOllamaStatusBtn = document.getElementById('refresh-ollama-status');
+        const ollamaInstalledStatus = document.getElementById('ollama-installed');
+        const ollamaRunningStatus = document.getElementById('ollama-running');
+        const installOllamaBtn = document.getElementById('install-ollama');
+        const startOllamaBtn = document.getElementById('start-ollama');
+        const ollamaModelSelect = document.getElementById('ollama_model');
+        const refreshOllamaModelsBtn = document.getElementById('refresh-ollama-models');
+        const downloadModelBtn = document.getElementById('download-model');
+        const downloadProgressContainer = document.getElementById('download-progress-container');
+        const downloadProgress = document.getElementById('download-progress');
+        const testOllamaModelBtn = document.getElementById('test-ollama-model');
+        const testResult = document.getElementById('test-result');
+        const testOutput = document.getElementById('test-output');
+        
         // Initialize token usage display
         updateTokenUsage();
         
@@ -231,6 +368,12 @@
         
         // Initialize GitHub status
         checkGitHubConnection();
+        
+        // Initialize Ollama status and models if Ollama is selected
+        if (llmProviderSelect.value === 'ollama') {
+            updateOllamaStatus();
+            refreshOllamaModels();
+        }
         
         // Update temperature value display
         if (temperatureSlider && tempValue) {
@@ -270,6 +413,202 @@
                 icon.classList.add('fa-eye');
             }
         });
+        
+        // Toggle between Together AI and Ollama settings
+        llmProviderSelect.addEventListener('change', function() {
+            if (this.value === 'together') {
+                togetherSettings.classList.remove('d-none');
+                ollamaSettings.classList.add('d-none');
+            } else if (this.value === 'ollama') {
+                togetherSettings.classList.add('d-none');
+                ollamaSettings.classList.remove('d-none');
+                
+                // Initialize Ollama status and models
+                updateOllamaStatus();
+                refreshOllamaModels();
+            }
+        });
+        
+        // Refresh Ollama status
+        if (refreshOllamaStatusBtn) {
+            refreshOllamaStatusBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                updateOllamaStatus().finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                });
+            });
+        }
+        
+        // Install Ollama
+        if (installOllamaBtn) {
+            installOllamaBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
+                
+                fetch('/api/ollama/install', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Success', `Ollama installed successfully`, 'success');
+                    } else if (data.status === 'warning') {
+                        showToast('Warning', data.message, 'warning');
+                        // Show installation instructions
+                        if (data.instructions) {
+                            testResult.classList.remove('d-none');
+                            testOutput.innerHTML = `<pre>${data.instructions}</pre>`;
+                        }
+                    } else {
+                        showToast('Error', data.error || 'Failed to install Ollama', 'danger');
+                    }
+                    
+                    // Update status
+                    updateOllamaStatus();
+                })
+                .catch(error => {
+                    console.error('Error installing Ollama:', error);
+                    showToast('Error', 'Failed to install Ollama', 'danger');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-download"></i> Install';
+                });
+            });
+        }
+        
+        // Start Ollama
+        if (startOllamaBtn) {
+            startOllamaBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+                
+                fetch('/api/ollama/start', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Success', `Ollama started successfully`, 'success');
+                    } else {
+                        showToast('Error', data.error || 'Failed to start Ollama', 'danger');
+                    }
+                    
+                    // Update status
+                    updateOllamaStatus();
+                })
+                .catch(error => {
+                    console.error('Error starting Ollama:', error);
+                    showToast('Error', 'Failed to start Ollama', 'danger');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-play"></i> Start';
+                });
+            });
+        }
+        
+        // Refresh Ollama models
+        if (refreshOllamaModelsBtn) {
+            refreshOllamaModelsBtn.addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                refreshOllamaModels().finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Models';
+                });
+            });
+        }
+        
+        // Download model
+        if (downloadModelBtn) {
+            downloadModelBtn.addEventListener('click', function() {
+                const model = ollamaModelSelect.value;
+                if (!model) {
+                    showToast('Error', 'Please select a model to download', 'danger');
+                    return;
+                }
+                
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+                downloadProgressContainer.classList.remove('d-none');
+                
+                // Start model download
+                fetch(`/api/ollama/models/${model}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Success', `Model ${model} downloaded successfully`, 'success');
+                        // Refresh models list
+                        refreshOllamaModels();
+                    } else {
+                        showToast('Error', data.error || `Failed to download model ${model}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error downloading model:', error);
+                    showToast('Error', `Failed to download model ${model}`, 'danger');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-download"></i> Download Selected Model';
+                    downloadProgressContainer.classList.add('d-none');
+                });
+            });
+        }
+        
+        // Test Ollama model
+        if (testOllamaModelBtn) {
+            testOllamaModelBtn.addEventListener('click', function() {
+                const model = ollamaModelSelect.value;
+                if (!model) {
+                    showToast('Error', 'Please select a model to test', 'danger');
+                    return;
+                }
+                
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+                testResult.classList.add('d-none');
+                
+                fetch('/api/ollama/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        prompt: 'Hello, I am testing if you are working properly. Please respond with a brief greeting.'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        testResult.classList.remove('d-none');
+                        testOutput.textContent = data.content || 'Test successful but no content returned';
+                    } else {
+                        showToast('Error', data.error || 'Test failed', 'danger');
+                        testResult.classList.remove('d-none');
+                        testOutput.innerHTML = `<p class="text-danger">Error: ${data.error || 'Test failed'}</p>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error testing model:', error);
+                    showToast('Error', 'Failed to test model', 'danger');
+                    testResult.classList.remove('d-none');
+                    testOutput.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-vial"></i> Test Model';
+                });
+            });
+        }
         
         // Refresh status button
         refreshStatusBtn.addEventListener('click', function() {
@@ -331,6 +670,177 @@
                 })
                 .catch(error => {
                     console.error('Error fetching token usage:', error);
+                });
+        }
+        
+        // Function to update Ollama status
+        function updateOllamaStatus() {
+            if (!ollamaInstalledStatus || !ollamaRunningStatus) {
+                return Promise.resolve();
+            }
+            
+            ollamaInstalledStatus.textContent = 'Checking...';
+            ollamaRunningStatus.textContent = 'Checking...';
+            installOllamaBtn.classList.add('d-none');
+            startOllamaBtn.classList.add('d-none');
+            
+            return fetch('/api/ollama/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const isInstalled = data.is_installed;
+                        const isRunning = data.is_running;
+                        
+                        // Update installation status
+                        ollamaInstalledStatus.textContent = isInstalled ? 'Yes' : 'No';
+                        ollamaInstalledStatus.className = isInstalled ? 'text-success' : 'text-danger';
+                        
+                        // Update running status
+                        ollamaRunningStatus.textContent = isRunning ? 'Yes' : 'No';
+                        ollamaRunningStatus.className = isRunning ? 'text-success' : 'text-danger';
+                        
+                        // Show/hide action buttons
+                        if (!isInstalled) {
+                            installOllamaBtn.classList.remove('d-none');
+                            startOllamaBtn.classList.add('d-none');
+                        } else if (!isRunning) {
+                            installOllamaBtn.classList.add('d-none');
+                            startOllamaBtn.classList.remove('d-none');
+                        } else {
+                            installOllamaBtn.classList.add('d-none');
+                            startOllamaBtn.classList.add('d-none');
+                        }
+                        
+                        // If running, update models list
+                        if (isRunning) {
+                            refreshOllamaModels();
+                        }
+                    } else {
+                        ollamaInstalledStatus.textContent = 'Error';
+                        ollamaRunningStatus.textContent = 'Error';
+                        ollamaInstalledStatus.className = 'text-danger';
+                        ollamaRunningStatus.className = 'text-danger';
+                        showToast('Error', data.error || 'Failed to check Ollama status', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking Ollama status:', error);
+                    ollamaInstalledStatus.textContent = 'Error';
+                    ollamaRunningStatus.textContent = 'Error';
+                    ollamaInstalledStatus.className = 'text-danger';
+                    ollamaRunningStatus.className = 'text-danger';
+                    showToast('Error', 'Failed to check Ollama status', 'danger');
+                });
+        }
+        
+        // Function to refresh Ollama models
+        function refreshOllamaModels() {
+            if (!ollamaModelSelect) {
+                return Promise.resolve();
+            }
+            
+            // Clear current options except the placeholder
+            while (ollamaModelSelect.options.length > 1) {
+                ollamaModelSelect.remove(1);
+            }
+            
+            ollamaModelSelect.options[0].text = 'Loading models...';
+            
+            return fetch('/api/ollama/models')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' && data.models) {
+                        const models = data.models;
+                        
+                        // Clear any existing options
+                        while (ollamaModelSelect.options.length) {
+                            ollamaModelSelect.remove(0);
+                        }
+                        
+                        // Add placeholder if no models
+                        if (models.length === 0) {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.text = 'No models available';
+                            option.disabled = true;
+                            option.selected = true;
+                            ollamaModelSelect.add(option);
+                            return;
+                        }
+                        
+                        // Group models into installed and recommended
+                        const installedModels = models.filter(model => model.installed);
+                        const recommendedModels = models.filter(model => !model.installed && model.recommended);
+                        
+                        // Add option groups
+                        if (installedModels.length > 0) {
+                            const installedGroup = document.createElement('optgroup');
+                            installedGroup.label = 'Installed Models';
+                            
+                            installedModels.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model.id;
+                                option.text = model.id;
+                                installedGroup.appendChild(option);
+                            });
+                            
+                            ollamaModelSelect.add(installedGroup);
+                        }
+                        
+                        if (recommendedModels.length > 0) {
+                            const recommendedGroup = document.createElement('optgroup');
+                            recommendedGroup.label = 'Recommended Models';
+                            
+                            recommendedModels.forEach(model => {
+                                const option = document.createElement('option');
+                                option.value = model.id;
+                                option.text = `${model.id} (Not installed)`;
+                                recommendedGroup.appendChild(option);
+                            });
+                            
+                            ollamaModelSelect.add(recommendedGroup);
+                        }
+                        
+                        // Select the current model if it exists
+                        const currentModel = "{{ ollama_model|default('llama4:latest') }}";
+                        for (let i = 0; i < ollamaModelSelect.options.length; i++) {
+                            if (ollamaModelSelect.options[i].value === currentModel) {
+                                ollamaModelSelect.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Add placeholder for error
+                        while (ollamaModelSelect.options.length) {
+                            ollamaModelSelect.remove(0);
+                        }
+                        
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.text = 'Failed to load models';
+                        option.disabled = true;
+                        option.selected = true;
+                        ollamaModelSelect.add(option);
+                        
+                        showToast('Error', data.error || 'Failed to load Ollama models', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading Ollama models:', error);
+                    
+                    // Add placeholder for error
+                    while (ollamaModelSelect.options.length) {
+                        ollamaModelSelect.remove(0);
+                    }
+                    
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.text = 'Failed to load models';
+                    option.disabled = true;
+                    option.selected = true;
+                    ollamaModelSelect.add(option);
+                    
+                    showToast('Error', 'Failed to load Ollama models', 'danger');
                 });
         }
         

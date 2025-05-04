@@ -120,9 +120,16 @@ def settings():
     from app.ai.github_service import github_service
     
     if request.method == 'POST':
+        # Get LLM provider selection
+        llm_provider = request.form.get('llm_provider', 'together')
+        
         # Update API keys
         together_api_key = request.form.get('together_api_key', '')
         github_token = request.form.get('github_token', '')
+        
+        # Get Ollama-specific settings
+        ollama_api_base = request.form.get('ollama_api_base', 'http://localhost:11434')
+        ollama_model = request.form.get('ollama_model')
         
         # Update model settings
         model_name = request.form.get('model_name')
@@ -130,16 +137,28 @@ def settings():
         max_tokens = request.form.get('max_tokens')
         streaming = 'streaming' in request.form  # Checkbox value
         
-        # Store in app config
+        # Store LLM provider in config and session
+        current_app.config['LLM_PROVIDER'] = llm_provider
+        session['llm_provider'] = llm_provider
+        
+        # Store API keys in app config
         current_app.config['TOGETHER_API_KEY'] = together_api_key
         current_app.config['GITHUB_TOKEN'] = github_token
+        
+        # Store Ollama settings in config
+        current_app.config['OLLAMA_API_BASE'] = ollama_api_base
+        if ollama_model:
+            current_app.config['OLLAMA_MODEL'] = ollama_model
         
         # Store in session for persistence
         session['together_api_key'] = together_api_key
         session['github_token'] = github_token
+        session['ollama_api_base'] = ollama_api_base
+        if ollama_model:
+            session['ollama_model'] = ollama_model
         
         # Update model settings in session
-        if model_name:
+        if model_name and llm_provider == 'together':
             model_service.set_model(model_name)
             session['model_name'] = model_name
         
@@ -160,7 +179,7 @@ def settings():
         session['streaming'] = streaming
         
         # Set API keys in services
-        if together_api_key:
+        if together_api_key and llm_provider == 'together':
             model_service.set_api_key(together_api_key)
         
         if github_token:
@@ -170,8 +189,13 @@ def settings():
         return redirect(url_for('main.index'))
     
     # For GET requests, display the settings form
+    llm_provider = session.get('llm_provider') or current_app.config.get('LLM_PROVIDER', 'together')
     together_api_key = session.get('together_api_key') or current_app.config.get('TOGETHER_API_KEY', '')
     github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN', '')
+    
+    # Get Ollama settings
+    ollama_api_base = session.get('ollama_api_base') or current_app.config.get('OLLAMA_API_BASE', 'http://localhost:11434')
+    ollama_model = session.get('ollama_model') or current_app.config.get('OLLAMA_MODEL', 'llama4:latest')
     
     # Get GitHub status and repository info
     github_status = github_service.get_status()
@@ -197,12 +221,15 @@ def settings():
     agent_status = model_service.get_status()
     
     return render_template('settings.html',
+                          llm_provider=llm_provider,
                           together_api_key=together_api_key,
                           github_token=github_token,
                           current_repo=current_repo,
                           repo_info=repo_info,
                           github_status=github_status,
                           model_name=model_name,
+                          ollama_api_base=ollama_api_base,
+                          ollama_model=ollama_model,
                           temperature=temperature,
                           max_tokens=max_tokens,
                           streaming=streaming,
