@@ -126,7 +126,15 @@ def settings():
         session['llm_provider'] = llm_provider
         
         # Get common settings
+        together_api_key = request.form.get('together_api_key', '')
         github_token = request.form.get('github_token', '')
+        
+        # Get Ollama-specific settings
+        ollama_api_base = request.form.get('ollama_api_base', 'http://localhost:11434')
+        ollama_model = request.form.get('ollama_model')
+        
+        # Get model settings
+        model_name = request.form.get('model_name')
         temperature = request.form.get('temperature')
         max_tokens = request.form.get('max_tokens')
         streaming = 'streaming' in request.form  # Checkbox value
@@ -135,7 +143,7 @@ def settings():
         current_app.config['GITHUB_TOKEN'] = github_token
         session['github_token'] = github_token
         
-        # Process temperature
+        # Process temperature and model settings
         if temperature:
             try:
                 temperature = float(temperature)
@@ -143,7 +151,7 @@ def settings():
             except (ValueError, TypeError):
                 pass
         
-        # Process max_tokens
+        # Process max tokens
         if max_tokens:
             try:
                 max_tokens = int(max_tokens)
@@ -156,7 +164,6 @@ def settings():
         # Provider-specific settings
         # -------------------------
         # Together AI
-        together_api_key = request.form.get('together_api_key', '')
         together_model = request.form.get('together_model')
         together_streaming = 'together_streaming' in request.form
         
@@ -226,8 +233,6 @@ def settings():
         session['cohere_model'] = cohere_model
         
         # Ollama
-        ollama_api_base = request.form.get('ollama_api_base', '')
-        ollama_model = request.form.get('ollama_model', 'llama4:latest')
         ollama_setup_type = request.form.get('ollama_setup_type', 'colab')
         
         # Handle custom Ollama model if selected
@@ -309,6 +314,7 @@ def settings():
         return redirect(url_for('main.index'))
     
     # For GET requests, display the settings form
+    llm_provider = session.get('llm_provider', current_app.config.get('LLM_PROVIDER', 'together'))
     together_api_key = session.get('together_api_key') or current_app.config.get('TOGETHER_API_KEY', '')
     github_token = session.get('github_token') or current_app.config.get('GITHUB_TOKEN', '')
     
@@ -316,120 +322,10 @@ def settings():
     github_status = github_service.get_status()
     current_repo = github_service.get_current_repo()
     
-    # Get repository info if available
-    repo_info = None
-    if current_repo and github_status.get('connected'):
+    if current_repo:
         repo_info = github_service.get_repo_info(current_repo)
-        if isinstance(repo_info, dict) and "error" in repo_info:
-            repo_info = None
-    
-    # Get model settings
-    model_name = model_service.get_model()
-    temperature = session.get('temperature', 0.7)
-    max_tokens = session.get('max_tokens', 2048)
-    streaming = session.get('streaming', True)
-    
-    # Get token usage
-    token_usage = model_service.get_token_usage()
-    
-    # Get agent status
-    agent_status = model_service.get_status()
-    
-    # Get provider settings
-    llm_provider = session.get('llm_provider', current_app.config.get('LLM_PROVIDER', 'together'))
-    
-    # Provider-specific settings
-    # Together AI
-    together_model = session.get('together_model', model_name)
-    together_streaming = session.get('together_streaming', streaming)
-    
-    # OpenAI
-    openai_api_key = session.get('openai_api_key', '')
-    openai_api_base = session.get('openai_api_base', '')
-    openai_model = session.get('openai_model', 'gpt-4o')
-    
-    # Anthropic
-    anthropic_api_key = session.get('anthropic_api_key', '')
-    anthropic_api_base = session.get('anthropic_api_base', '')
-    anthropic_model = session.get('anthropic_model', 'claude-3-opus-20240229')
-    
-    # Google
-    google_api_key = session.get('google_api_key', '')
-    google_api_base = session.get('google_api_base', '')
-    google_model = session.get('google_model', 'gemini-1.5-pro')
-    
-    # Mistral
-    mistral_api_key = session.get('mistral_api_key', '')
-    mistral_api_base = session.get('mistral_api_base', '')
-    mistral_model = session.get('mistral_model', 'mistral-large-latest')
-    
-    # Cohere
-    cohere_api_key = session.get('cohere_api_key', '')
-    cohere_api_base = session.get('cohere_api_base', '')
-    cohere_model = session.get('cohere_model', 'command-r-plus')
-    
-    # Ollama
-    ollama_api_base = session.get('ollama_api_base', '')
-    ollama_model = session.get('ollama_model', 'llama4:latest')
-    ollama_setup_type = session.get('ollama_setup_type', 'colab')
-    custom_ollama_model = session.get('custom_ollama_model', '')
-    
-    # Custom
-    custom_api_key = session.get('custom_api_key', '')
-    custom_api_base = session.get('custom_api_base', '')
-    custom_model = session.get('custom_model', '')
-    custom_streaming = session.get('custom_streaming', True)
-    
-    return render_template('settings.html',
-                          # LLM provider
-                          llm_provider=llm_provider,
-                          # Together AI
-                          together_api_key=together_api_key,
-                          together_model=together_model,
-                          together_streaming=together_streaming,
-                          # OpenAI
-                          openai_api_key=openai_api_key,
-                          openai_api_base=openai_api_base,
-                          openai_model=openai_model,
-                          # Anthropic
-                          anthropic_api_key=anthropic_api_key,
-                          anthropic_api_base=anthropic_api_base,
-                          anthropic_model=anthropic_model,
-                          # Google
-                          google_api_key=google_api_key,
-                          google_api_base=google_api_base,
-                          google_model=google_model,
-                          # Mistral
-                          mistral_api_key=mistral_api_key,
-                          mistral_api_base=mistral_api_base,
-                          mistral_model=mistral_model,
-                          # Cohere
-                          cohere_api_key=cohere_api_key,
-                          cohere_api_base=cohere_api_base,
-                          cohere_model=cohere_model,
-                          # Ollama
-                          ollama_api_base=ollama_api_base,
-                          ollama_model=ollama_model,
-                          ollama_setup_type=ollama_setup_type,
-                          custom_ollama_model=custom_ollama_model,
-                          # Custom
-                          custom_api_key=custom_api_key,
-                          custom_api_base=custom_api_base,
-                          custom_model=custom_model,
-                          custom_streaming=custom_streaming,
-                          # GitHub & common settings
-                          github_token=github_token,
-                          current_repo=current_repo,
-                          repo_info=repo_info,
-                          github_status=github_status,
-                          model_name=model_name,
-                          temperature=temperature,
-                          max_tokens=max_tokens,
-                          streaming=streaming,
-                          token_usage=token_usage,
-                          agent_status=agent_status)
-
-@bp.route('/download-chat')
+    else:
+        repo_info = None
 def download_chat():
     session_id = session.get('session_id')
     if not session_id:

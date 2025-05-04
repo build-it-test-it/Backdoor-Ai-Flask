@@ -494,9 +494,16 @@ def update_settings():
     
     data = request.json
     
+    # Get LLM provider settings
+    llm_provider = data.get('llm_provider')
+    
     # Update API keys
     together_api_key = data.get('together_api_key')
     github_token = data.get('github_token')
+    
+    # Get Ollama settings
+    ollama_api_base = data.get('ollama_api_base')
+    ollama_model = data.get('ollama_model')
     
     # Update model settings
     model_name = data.get('model_name')
@@ -504,21 +511,39 @@ def update_settings():
     max_tokens = data.get('max_tokens')
     streaming = data.get('streaming')
     
+    # Update LLM provider
+    if llm_provider is not None:
+        current_app.config['LLM_PROVIDER'] = llm_provider
+        session['llm_provider'] = llm_provider
+    else:
+        llm_provider = session.get('llm_provider') or current_app.config.get('LLM_PROVIDER', 'together')
+    
     # Update API keys
     if together_api_key is not None:
         current_app.config['TOGETHER_API_KEY'] = together_api_key
         session['together_api_key'] = together_api_key
-        model_service.set_api_key(together_api_key)
+        if llm_provider == 'together':
+            model_service.set_api_key(together_api_key)
     
     if github_token is not None:
         current_app.config['GITHUB_TOKEN'] = github_token
         session['github_token'] = github_token
         github_service.set_token(github_token)
     
+    # Update Ollama settings
+    if ollama_api_base is not None:
+        current_app.config['OLLAMA_API_BASE'] = ollama_api_base
+        session['ollama_api_base'] = ollama_api_base
+    
+    if ollama_model is not None:
+        current_app.config['OLLAMA_MODEL'] = ollama_model
+        session['ollama_model'] = ollama_model
+    
     # Update model settings
     if model_name is not None:
-        model_service.set_model(model_name)
-        session['model_name'] = model_name
+        if llm_provider == 'together':
+            model_service.set_model(model_name)
+            session['model_name'] = model_name
     
     if temperature is not None:
         try:
@@ -538,13 +563,14 @@ def update_settings():
         session['streaming'] = bool(streaming)
     
     # Check if the API key is valid
-    if together_api_key is not None:
+    if together_api_key is not None and llm_provider == 'together':
         model_service.check_api_key()
     
     return jsonify({
         'success': True,
         'message': 'Settings updated successfully',
-        'status': model_service.get_status()
+        'status': model_service.get_status(),
+        'llm_provider': llm_provider
     })
 
 @bp.route('/execute_bash', methods=['POST'])
