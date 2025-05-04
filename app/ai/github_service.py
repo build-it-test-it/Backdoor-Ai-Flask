@@ -281,6 +281,33 @@ class GitHubService:
         self.branches_cache = {}
         self.files_cache = {}
         return True
+        
+    def get_status(self):
+        """Get the status of the GitHub service."""
+        token = self.get_token()
+        if not token:
+            return {
+                "connected": False,
+                "message": "GitHub token not set",
+                "user": None
+            }
+            
+        # Check if we can connect to GitHub
+        user_info = self.get_user_info()
+        if "error" in user_info:
+            return {
+                "connected": False,
+                "message": user_info.get("error", "Failed to connect to GitHub"),
+                "user": None
+            }
+            
+        return {
+            "connected": True,
+            "message": "Connected to GitHub",
+            "user": user_info.get("login"),
+            "avatar_url": user_info.get("avatar_url"),
+            "html_url": user_info.get("html_url")
+        }
 
 # Singleton instance
 github_service = GitHubService()
