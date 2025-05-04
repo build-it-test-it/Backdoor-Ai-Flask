@@ -114,7 +114,7 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Register blueprints
-    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api, code_agent_api, backdoor_api
+    from app.routes import main, api, agents_api, vscode_api, health, enhanced_agents_api, code_agent_api, backdoor_api, ollama_api
     from app.ai import mcp_routes, mcp_routes_enhanced
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp)
@@ -126,6 +126,7 @@ def create_app():
     app.register_blueprint(enhanced_agents_api.bp)
     app.register_blueprint(code_agent_api.bp)
     app.register_blueprint(backdoor_api.bp)
+    app.register_blueprint(ollama_api.bp)
     
     # Initialize session ID middleware
     @app.before_request

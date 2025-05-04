@@ -42,3 +42,6 @@ scipy>=1.11.3
 seaborn>=0.13.0
 transformers>=4.35.0
 torch>=2.1.0
+# Ollama dependencies
+requests>=2.31.0  # Already included above
+httpx>=0.24.1     # Already included above
