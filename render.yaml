@@ -4,13 +4,37 @@ services:
     env: python
     plan: free
     buildCommand: |
+      # Install system dependencies for code-server and Docker
       apt-get update && apt-get install -y curl wget git gnupg build-essential apt-transport-https ca-certificates lsb-release
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
       echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
       apt-get update && apt-get install -y docker-ce-cli
+
+      # Install code-server
       curl -fsSL https://code-server.dev/install.sh | sh
+
+      # Install Python dependencies
       pip install -r requirements.txt
+
+      # Run database migrations
       python -m flask db upgrade
+
+      # Create directories for initialization
+      echo "Creating necessary directories..."
+      mkdir -p /tmp/backdoor/{tools,cache,logs,data,config,vscode/workspaces,vscode/sessions,microagents,runtime,plugins,extensions,templates,static,uploads,downloads,backups}
+
+      # Create Docker network if it doesn't exist
+      if command -v docker &> /dev/null; then
+        if ! docker network ls | grep -q backdoor-network; then
+          echo "Creating Docker network: backdoor-network"
+          docker network create backdoor-network || true
+        fi
+      fi
+
+      echo "Backdoor initialized at $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > /tmp/backdoor/initialized
+      echo "Pre-boot initialization complete!"
+
+      # Create microagents directory and copy files
       mkdir -p app/backdoor/microagents
       if [ -d "OpenHands/microagents" ]; then
         cp -r OpenHands/microagents/* app/backdoor/microagents/
@@ -94,17 +118,3 @@ databases:
   - name: backdoor-db
     plan: free
     postgresMajorVersion: 14
-
-preBootScript: |
-  #!/bin/bash
-  set -e
-  echo "Creating necessary directories..."
-  mkdir -p /tmp/backdoor/{tools,cache,logs,data,config,vscode/workspaces,vscode/sessions,microagents,runtime,plugins,extensions,templates,static,uploads,downloads,backups}
-  if command -v docker &> /dev/null; then
-    if ! docker network ls | grep -q backdoor-network; then
-      echo "Creating Docker network: backdoor-network"
-      docker network create backdoor-network || true
-    fi
-  fi
-  echo "Backdoor initialized at $(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/backdoor/initialized
-  echo "Pre-boot initialization complete!"
