@@ -43,6 +43,7 @@ services:
       fi
     startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 wsgi:app
     autoDeploy: true
+
       - key: LLM_PROVIDER
         value: "together"
       - key: GITHUB_TOKEN
