@@ -1,8 +1,8 @@
 import json
 import os
-import requests
 import uuid
 import time
+import logging
 from datetime import datetime
 from flask import current_app, session
 from typing import Any, Dict, List, Optional, Union
@@ -13,17 +13,23 @@ from app.ai.tools import tool_registry
 from app.ai.mcp_server import mcp_server
 from app.ai.mcp_tool_handler import mcp_tool_handler
 from app.ai.mcp_agents import agent_manager, AgentRole
+from app.backdoor.core.config import get_config
+from app.backdoor.llm.multi_provider_client import MultiProviderLLMClient
 
-class TogetherAIService:
-    """Service for interacting with Together AI's API, inspired by OpenHands LLM implementation"""
+# Set up logging
+logger = logging.getLogger("model_service")
+
+class UnifiedModelService:
+    """
+    Unified Model Service for Backdoor AI.
+    This service integrates TogetherAI and MultiProviderLLMClient functionality
+    to provide a consistent interface for LLM interactions throughout the application.
+    """
     
     DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
-    API_URL = "https://api.together.xyz/v1/chat/completions"
     
     def __init__(self, api_key=None):
-        self.api_key = api_key
-        self.active_tools = {}  # Track active tool executions
-        self.model_id = self.DEFAULT_MODEL
+        """Initialize the unified model service."""
         self.initialized = False
         self.ready = False
         
@@ -34,112 +40,134 @@ class TogetherAIService:
             "total_tokens": 0
         }
         
-        # Load token usage from session if available
+        # Initialize the Multi-Provider LLM Client
         try:
-            session_tokens = session.get('token_usage')
-            if session_tokens:
-                self.token_usage = session_tokens
-        except RuntimeError:
-            # Working outside of request context
-            pass
+            config = get_config()
+            self.llm_client = MultiProviderLLMClient(config)
+            
+            # Set API key if provided
+            if api_key:
+                if config.llm.provider == "together":
+                    self.llm_client.update_config({"api_key": api_key})
+            
+            # Load token usage from session if available
+            try:
+                session_tokens = session.get('token_usage')
+                if session_tokens:
+                    self.token_usage = session_tokens
+            except RuntimeError:
+                # Working outside of request context
+                pass
+                
+            self.initialized = True
+            logger.info("Unified Model Service initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing Unified Model Service: {e}")
     
-    def set_api_key(self, api_key):
-        """Set the API key"""
-        self.api_key = api_key
+    def set_api_key(self, api_key, provider=None):
+        """Set the API key for the specified provider."""
+        if not provider:
+            provider = self.llm_client.provider
+            
+        # Update the LLM client configuration
+        self.llm_client.update_config({
+            "provider": provider,
+            "api_key": api_key
+        })
         
-        # Check if the API key is valid by making a test request
-        if api_key:
-            self.check_api_key()
+        # Check if the API key is valid
+        if self.check_api_key():
+            session[f'{provider}_api_key'] = api_key
+            return True
+        return False
     
-    def get_api_key(self):
-        """Get the API key from session if not set"""
-        if not self.api_key:
-            self.api_key = session.get('together_api_key')
-        return self.api_key
+    def get_api_key(self, provider=None):
+        """Get the API key for the specified provider."""
+        if not provider:
+            provider = self.llm_client.provider
+            
+        # Try to get from session if not in client
+        if provider == self.llm_client.provider:
+            return self.llm_client.api_key
+            
+        # Try to get from session
+        return session.get(f'{provider}_api_key')
     
-    def set_model(self, model_id):
-        """Set the model ID"""
-        self.model_id = model_id or self.DEFAULT_MODEL
-        session['model_id'] = self.model_id
-        return self.model_id
+    def set_model(self, model_id, provider=None):
+        """Set the model ID for the specified provider."""
+        config_update = {"model": model_id}
+        if provider:
+            config_update["provider"] = provider
+            
+        self.llm_client.update_config(config_update)
+        session['model_id'] = model_id
+        session['provider'] = provider or self.llm_client.provider
+        
+        return model_id
     
     def get_model(self):
-        """Get the model ID from session if not set"""
-        if not hasattr(self, 'model_id') or not self.model_id:
-            self.model_id = session.get('model_id') or self.DEFAULT_MODEL
-        return self.model_id
+        """Get the current model ID."""
+        return self.llm_client.model
+    
+    def get_provider(self):
+        """Get the current provider."""
+        return self.llm_client.provider
     
     def get_status(self):
-        """Get the current status of the model service"""
-        api_key = self.get_api_key()
-        
-        # Check if OpenHands is initialized
+        """Get the current status of the model service."""
         backdoor_initialized = os.path.exists('/tmp/backdoor/initialized')
         
         # Get token usage
         token_usage = self.get_token_usage()
         
         return {
-            "ready": self.ready and backdoor_initialized and bool(api_key),
+            "ready": self.ready and backdoor_initialized and bool(self.llm_client.api_key),
             "initialized": self.initialized and backdoor_initialized,
-            "api_key_set": bool(api_key),
+            "api_key_set": bool(self.llm_client.api_key),
             "model": self.get_model(),
+            "provider": self.get_provider(),
             "token_usage": token_usage,
-            "openhands_initialized": openhands_initialized,
+            "backdoor_initialized": backdoor_initialized,
             "timestamp": datetime.now().isoformat()
         }
     
     def check_api_key(self):
-        """Check if the API key is valid"""
-        api_key = self.get_api_key()
-        if not api_key:
-            self.ready = False
-            return False
-        
-        # Make a simple request to check if the API key is valid
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": self.get_model(),
-            "messages": [
+        """Check if the API key is valid by making a test request."""
+        try:
+            # Simple test message
+            messages = [
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "Hello"}
-            ],
-            "max_tokens": 1  # Minimize token usage for the test
-        }
-        
-        try:
-            response = requests.post(
-                self.API_URL,
-                headers=headers,
-                json=payload,
-                timeout=5  # Short timeout for the test
+            ]
+            
+            # Use a small max_tokens to minimize token usage
+            response = self.llm_client.completion(
+                messages=messages,
+                max_tokens=1
             )
             
-            if response.status_code == 200:
+            # Check if response is valid
+            if response and "choices" in response:
                 self.ready = True
-                self.initialized = True
                 return True
             else:
                 self.ready = False
                 return False
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error checking API key: {e}")
             self.ready = False
             return False
-        
+    
     def get_token_usage(self):
-        """Get the current token usage"""
+        """Get the current token usage."""
         # Get from session if available
         session_tokens = session.get('token_usage')
         if session_tokens:
             return session_tokens
         return self.token_usage
-        
+    
     def update_token_usage(self, usage_data):
-        """Update token usage with new data"""
+        """Update token usage with new data."""
         current_usage = self.get_token_usage()
         
         # Update counts
@@ -154,11 +182,10 @@ class TogetherAIService:
         return current_usage
     
     def chat_completion(self, messages, temperature=0.7, max_tokens=1024, tools=None, tool_choice=None):
-        """Get a chat completion from Together AI with optional function calling"""
-        api_key = self.get_api_key()
-        if not api_key:
+        """Get a chat completion from the configured LLM provider with optional function calling."""
+        if not self.llm_client.api_key:
             return {
-                "error": "API key not set. Please configure your Together AI API key in settings."
+                "error": f"API key not set for provider {self.llm_client.provider}. Please configure your API key in settings."
             }
         
         # Add system message with context if not already present
@@ -177,53 +204,38 @@ class TogetherAIService:
                     message['metadata'] = {}
                 message['metadata']['context'] = context_provider.get_full_context()
         
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": self.get_model(),
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        
-        # Add tools if provided
-        if tools:
-            payload["tools"] = tools
-        
-        # Add tool_choice if provided
-        if tool_choice:
-            payload["tool_choice"] = tool_choice
-        
         try:
-            response = requests.post(
-                self.API_URL,
-                headers=headers,
-                json=payload
-            )
+            # Create completion arguments
+            completion_args = {
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
             
-            if response.status_code == 200:
-                response_data = response.json()
-                
-                # Track token usage if available in the response
-                if "usage" in response_data:
-                    self.update_token_usage(response_data["usage"])
-                
-                return response_data
-            else:
-                return {
-                    "error": f"API request failed with status code {response.status_code}",
-                    "details": response.text
-                }
+            # Add tools if provided
+            if tools:
+                completion_args["functions"] = tools
+            
+            # Add tool_choice if provided
+            if tool_choice:
+                completion_args["function_call"] = tool_choice
+            
+            # Call the LLM client
+            response = self.llm_client.completion(**completion_args)
+            
+            # Track token usage if available
+            if "usage" in response:
+                self.update_token_usage(response["usage"])
+            
+            return response
         except Exception as e:
+            logger.error(f"Error in chat completion: {e}")
             return {
                 "error": f"Exception occurred: {str(e)}"
             }
     
     def process_chat(self, user_message, chat_history=None, context=None):
-        """Process a chat message and handle all the context and tracking, similar to OpenHands implementation"""
+        """Process a chat message and handle all the context and tracking."""
         if chat_history is None:
             chat_history = self.load_chat_history()
         
@@ -253,7 +265,7 @@ class TogetherAIService:
                                 context['environment_info'] = items[0]  # Use most recent
                 
             except Exception as e:
-                print(f"Error getting MCP context: {str(e)}")
+                logger.error(f"Error getting MCP context: {str(e)}")
                 context = context_provider.get_full_context()
         
         # Format messages for the API
@@ -308,7 +320,7 @@ class TogetherAIService:
             )
         except Exception as e:
             # Log but continue if behavior tracking fails
-            print(f"Error tracking behavior: {str(e)}")
+            logger.error(f"Error tracking behavior: {str(e)}")
         
         # Get tool schemas from MCP tool handler
         try:
@@ -320,7 +332,7 @@ class TogetherAIService:
                 tools = tool_registry.get_tool_schemas()
         except Exception as e:
             # Default to no tools if there's an error
-            print(f"Error getting tool schemas: {str(e)}")
+            logger.error(f"Error getting tool schemas: {str(e)}")
             tools = None
         
         # Call the API with tools - with rate limit handling
@@ -394,8 +406,8 @@ class TogetherAIService:
             # If there's an error extracting the response, provide a fallback
             assistant_message = "I apologize, but there was an error processing your request. Please try again."
             tool_calls = []
-            print(f"Error extracting assistant response: {str(e)}")
-            print(f"Response data: {response_data}")
+            logger.error(f"Error extracting assistant response: {str(e)}")
+            logger.debug(f"Response data: {response_data}")
         
         # Add user message to history
         user_msg = {
@@ -422,7 +434,7 @@ class TogetherAIService:
         try:
             self.save_chat_history(chat_history)
         except Exception as e:
-            print(f"Error saving chat history: {str(e)}")
+            logger.error(f"Error saving chat history: {str(e)}")
             # Continue anyway - it's better to return a response with unsaved history
             # than to fail the entire request
         
@@ -442,7 +454,7 @@ class TogetherAIService:
                 context=context
             )
         except Exception as e:
-            print(f"Error recording interaction in MCP server: {str(e)}")
+            logger.error(f"Error recording interaction in MCP server: {str(e)}")
         
         # Process tool calls if present
         tool_results = []
@@ -538,12 +550,12 @@ class TogetherAIService:
         }
     
     def record_feedback(self, interaction_id, rating, comment=None):
-        """Record feedback for an interaction"""
+        """Record feedback for an interaction."""
         success = behavior_tracker.record_feedback(interaction_id, rating, comment)
         return success
     
     def save_chat_history(self, messages):
-        """Save chat history to disk"""
+        """Save chat history to disk."""
         session_id = session.get('session_id')
         if not session_id:
             return False
@@ -564,7 +576,7 @@ class TogetherAIService:
         return True
     
     def load_chat_history(self):
-        """Load chat history from disk"""
+        """Load chat history from disk."""
         session_id = session.get('session_id')
         if not session_id:
             return []
@@ -580,6 +592,34 @@ class TogetherAIService:
                 return []
         
         return []
+    
+    def get_available_models(self):
+        """Get a list of all available models from the LLM client."""
+        return self.llm_client.get_available_models()
+    
+    def get_providers(self):
+        """Get a list of all available providers."""
+        config = get_config()
+        providers = []
+        for provider_id, provider_config in config.llm.providers.items():
+            # Skip custom provider if no API base is set
+            if provider_id == "custom" and not provider_config.api_base:
+                continue
+                
+            providers.append({
+                "id": provider_id,
+                "name": provider_config.name,
+                "api_base": provider_config.api_base,
+                "default_model": provider_config.default_model,
+                "models_count": len(provider_config.models),
+            })
+        
+        return providers
 
-# Singleton instance
-model_service = TogetherAIService()
+# Singleton instance that uses LLMClient for all model interactions
+model_service = UnifiedModelService()
+
+# For backward compatibility
+class TogetherAIService(UnifiedModelService):
+    """Legacy class for backward compatibility."""
+    pass
