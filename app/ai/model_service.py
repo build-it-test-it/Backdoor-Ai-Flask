@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import uuid
+import time
 from datetime import datetime
 from flask import current_app, session
 from typing import Any, Dict, List, Optional, Union
@@ -237,7 +238,7 @@ class TogetherAIService:
             if msg.get('role') in ['user', 'assistant']:
                 message_to_add = {
                     'role': msg.get('role'),
-                    'content': msg.get('content')
+                    'content': msg.get('content', '')  # Ensure content is never None
                 }
                 
                 # Include tool calls and results if present
@@ -257,40 +258,97 @@ class TogetherAIService:
         })
         
         # Record user behavior
-        behavior_tracker.record_behavior(
-            action="chat",
-            screen=context.get("current_screen", {}).get("screen_name", "Unknown"),
-            details={"message": user_message}
-        )
+        try:
+            behavior_tracker.record_behavior(
+                action="chat",
+                screen=context.get("current_screen", {}).get("screen_name", "Unknown"),
+                details={"message": user_message}
+            )
+        except Exception as e:
+            # Log but continue if behavior tracking fails
+            print(f"Error tracking behavior: {str(e)}")
         
         # Get tool schemas
-        tools = tool_registry.get_tool_schemas()
+        try:
+            tools = tool_registry.get_tool_schemas()
+        except Exception as e:
+            # Default to no tools if there's an error
+            print(f"Error getting tool schemas: {str(e)}")
+            tools = None
         
-        # Call the API with tools
-        response_data = self.chat_completion(messages, tools=tools)
+        # Call the API with tools - with rate limit handling
+        max_retries = 2
+        retry_count = 0
+        retry_delay = 1  # Start with 1 second delay
         
-        if "error" in response_data:
-            error_message = response_data.get("error")
+        while retry_count <= max_retries:
+            try:
+                # Call the API with tools
+                response_data = self.chat_completion(messages, tools=tools)
+                
+                # Break the loop if successful
+                if "error" not in response_data:
+                    break
+                
+                # If rate limited, retry
+                error_message = response_data.get("error", "")
+                if "429" in error_message and retry_count < max_retries:
+                    retry_count += 1
+                    # Exponential backoff
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    # Other error or final retry failed
+                    # Save error to history
+                    error_msg = {
+                        'role': 'system',
+                        'content': f"Error: {error_message}",
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    chat_history.append(error_msg)
+                    self.save_chat_history(chat_history)
+                    
+                    return {
+                        "success": False,
+                        "error": error_message,
+                        "history": chat_history
+                    }
+            except Exception as e:
+                error_message = str(e)
+                # Save error to history
+                error_msg = {
+                    'role': 'system',
+                    'content': f"Error: {error_message}",
+                    'timestamp': datetime.now().isoformat()
+                }
+                chat_history.append(error_msg)
+                self.save_chat_history(chat_history)
+                
+                return {
+                    "success": False,
+                    "error": error_message,
+                    "history": chat_history
+                }
             
-            # Save error to history
-            error_msg = {
-                'role': 'system',
-                'content': f"Error: {error_message}",
-                'timestamp': datetime.now().isoformat()
-            }
-            chat_history.append(error_msg)
-            self.save_chat_history(chat_history)
-            
-            return {
-                "success": False,
-                "error": error_message,
-                "history": chat_history
-            }
+            # Increment retry count if we get here
+            retry_count += 1
         
-        # Extract the assistant's response
-        assistant_response = response_data.get('choices', [{}])[0].get('message', {})
-        assistant_message = assistant_response.get('content') or ''  # Ensure we never have None
-        tool_calls = assistant_response.get('tool_calls', [])
+        # Extract the assistant's response with proper error handling
+        try:
+            assistant_response = response_data.get('choices', [{}])[0].get('message', {})
+            # Ensure we never have None for content
+            assistant_message = assistant_response.get('content', '')
+            if assistant_message is None:
+                assistant_message = "I apologize, but I couldn't generate a response. Please try again."
+            
+            tool_calls = assistant_response.get('tool_calls', [])
+        except Exception as e:
+            # If there's an error extracting the response, provide a fallback
+            assistant_message = "I apologize, but there was an error processing your request. Please try again."
+            tool_calls = []
+            print(f"Error extracting assistant response: {str(e)}")
+            print(f"Response data: {response_data}")
         
         # Add user message to history
         user_msg = {
@@ -313,8 +371,13 @@ class TogetherAIService:
         
         chat_history.append(assistant_msg)
         
-        # Save updated history
-        self.save_chat_history(chat_history)
+        # Save updated history with error handling
+        try:
+            self.save_chat_history(chat_history)
+        except Exception as e:
+            print(f"Error saving chat history: {str(e)}")
+            # Continue anyway - it's better to return a response with unsaved history
+            # than to fail the entire request
         
         # Record the interaction for learning
         interaction = behavior_tracker.record_interaction(
