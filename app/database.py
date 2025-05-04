@@ -10,7 +10,7 @@ import logging
 import os
 import time
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine, exc
+from sqlalchemy import create_engine, exc, text
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -72,7 +72,7 @@ def db_check_connection(max_retries=5, retry_delay=2):
     while retry_count < max_retries:
         try:
             # Attempt to execute a simple query
-            db.session.execute("SELECT 1")
+            db.session.execute(text("SELECT 1"))
             logger.info("Database connection test successful")
             return True
         except OperationalError as e:
@@ -153,7 +153,7 @@ def db_health_check():
     """
     try:
         start_time = time.time()
-        db.session.execute("SELECT 1")
+        db.session.execute(text("SELECT 1"))
         elapsed = time.time() - start_time
         
         return {
