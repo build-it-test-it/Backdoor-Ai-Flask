@@ -511,9 +511,9 @@ class CodeActAgent(Agent):
                 raise ToolExecutionError("Old string is required for str_replace command")
             
             # Create a sed command to replace the string
-            # Fix backslash escaping in f-string
-            old_str_escaped = old_str.replace('/', '\\/').replace('\\', '\\\\')
-            new_str_escaped = new_str.replace('/', '\\/').replace('\\', '\\\\')
+            # Fix backslash escaping for sed command
+            old_str_escaped = old_str.replace('/', r'\/').replace('\\', r'\\')
+            new_str_escaped = new_str.replace('/', r'\/').replace('\\', r'\\')
             sed_command = f"sed -i 's/{old_str_escaped}/{new_str_escaped}/g' {path}"
             result = self.runtime.execute_command(sed_command)
             
