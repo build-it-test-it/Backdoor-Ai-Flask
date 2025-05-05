@@ -511,7 +511,10 @@ class CodeActAgent(Agent):
                 raise ToolExecutionError("Old string is required for str_replace command")
             
             # Create a sed command to replace the string
-            sed_command = f"sed -i 's/{old_str.replace('/', '\\/')}/{new_str.replace('/', '\\/')}/g' {path}"
+            # Fix backslash escaping in f-string
+            old_str_escaped = old_str.replace('/', '\\/').replace('\\', '\\\\')
+            new_str_escaped = new_str.replace('/', '\\/').replace('\\', '\\\\')
+            sed_command = f"sed -i 's/{old_str_escaped}/{new_str_escaped}/g' {path}"
             result = self.runtime.execute_command(sed_command)
             
             return {
@@ -530,7 +533,9 @@ class CodeActAgent(Agent):
                 raise ToolExecutionError("New string is required for insert command")
             
             # Create a sed command to insert the string
-            sed_command = f"sed -i '{insert_line}a {new_str}' {path}"
+            # Escape special characters in the new string
+            new_str_escaped = new_str.replace("'", "'\\''")
+            sed_command = f"sed -i '{insert_line}a {new_str_escaped}' {path}"
             result = self.runtime.execute_command(sed_command)
             
             return {
