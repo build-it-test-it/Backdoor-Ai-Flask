@@ -13,7 +13,7 @@
   "intermediate_size": 14336,
   "max_position_embeddings": 8192,
   "mlp_bias": false,
-  "model_type": "B2D4G5",
+  "model_type": "llama",
   "num_attention_heads": 32,
   "num_hidden_layers": 32,
   "num_key_value_heads": 8,
