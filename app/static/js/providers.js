@@ -107,21 +107,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 const model = this.getAttribute('data-model');
                 if (ollamaModelSelect && model) {
                     // Find and select the option
-                    const modelValue = model === 'custom' ? 'custom' : `${model}:latest`;
+                    let optionFound = false;
                     
                     for (let i = 0; i < ollamaModelSelect.options.length; i++) {
-                        if (ollamaModelSelect.options[i].value === modelValue) {
+                        if (ollamaModelSelect.options[i].value === model) {
                             ollamaModelSelect.selectedIndex = i;
+                            optionFound = true;
                             
-                            // Show/hide custom model input if needed
-                            if (modelValue === 'custom') {
-                                customModelContainer.classList.remove('d-none');
-                            } else {
-                                customModelContainer.classList.add('d-none');
-                            }
-                            
+                            // Hide custom model input
+                            customModelContainer.classList.add('d-none');
                             break;
                         }
+                    }
+                    
+                    // If not found, set as custom model
+                    if (!optionFound) {
+                        // Find the custom option
+                        for (let i = 0; i < ollamaModelSelect.options.length; i++) {
+                            if (ollamaModelSelect.options[i].value === 'custom') {
+                                ollamaModelSelect.selectedIndex = i;
+                                
+                                // Show and set custom model input
+                                customModelContainer.classList.remove('d-none');
+                                const customModelInput = document.getElementById('custom_ollama_model');
+                                if (customModelInput) {
+                                    customModelInput.value = model;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Save the selection to ensure it persists
+                    const apiBase = document.getElementById('ollama_api_base').value;
+                    if (apiBase) {
+                        fetch('/api/ollama/config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                model: ollamaModelSelect.value,
+                                custom_model: ollamaModelSelect.value === 'custom' ? 
+                                    document.getElementById('custom_ollama_model').value : null,
+                                api_base: apiBase
+                            })
+                        }).catch(error => console.error('Error saving model selection:', error));
                     }
                 }
             });
@@ -139,13 +170,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (!model || model === 'custom' && !document.getElementById('custom_ollama_model').value) {
+            if (!model || (model === 'custom' && !document.getElementById('custom_ollama_model').value)) {
                 showToast('Error', 'Please select a model first', 'danger');
                 return;
             }
             
             const customModel = model === 'custom' ? document.getElementById('custom_ollama_model').value : null;
             const modelToTest = customModel || model;
+            
+            // Save the settings first to ensure we're testing with the correct configuration
+            fetch('/api/ollama/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    custom_model: customModel,
+                    api_base: apiBase
+                })
+            }).then(response => response.json())
+              .catch(error => console.error('Error saving settings:', error));
             
             // Update button state
             this.disabled = true;
