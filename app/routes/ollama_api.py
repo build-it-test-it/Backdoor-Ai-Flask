@@ -367,7 +367,13 @@ def update_config():
         client = get_ollama_client()
         
         if "model" in data:
-            client.set_model(data["model"])
+            # Handle custom model case
+            if data["model"] == "custom" and "custom_model" in data:
+                client.set_model(data["custom_model"])
+                # Store the custom model in session for persistence
+                session['custom_ollama_model'] = data["custom_model"]
+            else:
+                client.set_model(data["model"])
         
         if "api_base" in data:
             client.set_api_base(data["api_base"])
@@ -377,7 +383,8 @@ def update_config():
             "message": "Ollama configuration updated",
             "config": {
                 "model": client.get_model(),
-                "api_base": client.get_api_base()
+                "api_base": client.get_api_base(),
+                "custom_model": session.get('custom_ollama_model', '')
             }
         })
     except Exception as e:

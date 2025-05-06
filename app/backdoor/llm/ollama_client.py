@@ -80,6 +80,15 @@ class OllamaClient:
         Returns:
             The API base URL.
         """
+        # Clean up the API base URL if needed
+        if api_base:
+            # Remove trailing slashes
+            api_base = api_base.rstrip('/')
+            
+            # Ensure the URL has a scheme
+            if not api_base.startswith(('http://', 'https://')):
+                api_base = 'https://' + api_base
+        
         self.api_base = api_base or self.DEFAULT_API_BASE
         session['ollama_api_base'] = self.api_base
         return self.api_base

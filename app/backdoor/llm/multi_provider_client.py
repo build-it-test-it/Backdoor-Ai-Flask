@@ -158,7 +158,6 @@ class MultiProviderLLMClient:
             wait=tenacity.wait_exponential(
                 multiplier=self.llm_config.retry_delay,
                 exp_base=self.llm_config.retry_backoff,
-                jitter=self.llm_config.retry_jitter,
                 max=self.llm_config.retry_max_delay,
             ),
             stop=tenacity.stop_after_attempt(self.llm_config.max_retries),
