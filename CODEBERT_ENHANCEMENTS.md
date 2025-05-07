@@ -20,17 +20,21 @@ The original error was occurring because the dataset's `label` column was a `Val
 - Implemented gradient checkpointing to reduce memory footprint
 
 #### Speed Improvements
-- Added mixed precision training (fp16) for faster computation
+- Added mixed precision training (fp16 for GPU, bf16 for TPU) for faster computation
 - Optimized batch sizes based on available hardware
 - Implemented efficient data loading with multiprocessing
-- Added better caching for processed datasets
+- Added better caching for processed datasets with fingerprinting
 - Improved tokenization with batched processing and fast tokenizers
+- Added stride parameter to tokenizer for better handling of long sequences
+- Disabled unnecessary token mappings to reduce memory overhead
 
 #### Training Stability
 - Added early stopping to prevent overfitting
 - Implemented better checkpoint handling for reliable training resumption
 - Added gradient clipping to prevent exploding gradients
 - Implemented warmup steps for learning rate scheduler
+- Added gradient accumulation for larger effective batch sizes
+- Optimized optimizer parameters (beta1, beta2, epsilon)
 
 ### 3. LoRA Implementation (Low-Rank Adaptation)
 
