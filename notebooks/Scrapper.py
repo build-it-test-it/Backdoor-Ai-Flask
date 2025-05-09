@@ -54,7 +54,7 @@ MAX_WORKERS = 8
 REQUEST_TIMEOUT = 60
 
 # Enable simulation mode for testing when APIs fail
-SIMULATION_MODE = True  # Set to False to use real APIs
+SIMULATION_MODE = False  # Set to False to use real APIs
 
 # Supported programming languages
 LANGUAGES = ["Swift", "Python", "Lua", "C", "C++", "Objective-C", "C#", "Ruby", "JavaScript", "TypeScript"]
