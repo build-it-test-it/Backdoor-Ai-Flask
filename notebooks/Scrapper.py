@@ -72,6 +72,230 @@ LANGUAGE_FILE_EXTENSIONS = {
     "TypeScript": [".ts", ".tsx"]
 }
 
+# Target URLs for scraping by language and site type
+TARGET_URLS = {
+    "Swift": [
+        "https://docs.swift.org/swift-book/",
+        "https://developer.apple.com/swift/",
+        "https://stackoverflow.com/questions/tagged/swift",
+        "https://github.com/search?q=language%3Aswift",
+        "https://github.com/apple/swift",
+        "https://github.com/vapor/vapor",
+        "https://www.hackingwithswift.com/",
+        "https://www.raywenderlich.com/category/swift",
+        "https://www.codecademy.com/learn/learn-swift",
+        "https://www.coursera.org/courses?query=swift",
+        "https://www.edx.org/learn/swift",
+        "https://www.udemy.com/topic/swift/",
+        "https://www.reddit.com/r/swift/",
+        "https://forums.swift.org/",
+        "https://nshipster.com/",
+        "https://useyourloaf.com/",
+        "https://swiftweekly.github.io/",
+        "https://swift.org/",
+        "https://swift.sandbox.bluemix.net/",
+        "https://www.apple.com/swift/playgrounds/"
+    ],
+    "Python": [
+        "https://docs.python.org/3/",
+        "https://www.python.org/",
+        "https://pypi.org/",
+        "https://stackoverflow.com/questions/tagged/python",
+        "https://www.reddit.com/r/python/",
+        "https://realpython.com/",
+        "https://www.tutorialspoint.com/python/",
+        "https://www.w3schools.com/python/",
+        "https://www.geeksforgeeks.org/python-programming-language/",
+        "https://towardsdatascience.com/tagged/python",
+        "https://medium.com/tag/python",
+        "https://github.com/search?q=language%3Apython",
+        "https://github.com/python/cpython",
+        "https://github.com/psf/requests",
+        "https://github.com/numpy/numpy",
+        "https://github.com/pandas-dev/pandas",
+        "https://github.com/django/django",
+        "https://github.com/pallets/flask",
+        "https://www.kaggle.com/code?language=Python",
+        "https://jupyter.org/"
+    ],
+    "Lua": [
+        "https://www.lua.org/manual/5.4/",
+        "https://www.lua.org/",
+        "https://stackoverflow.com/questions/tagged/lua",
+        "https://github.com/search?q=language%3Alua",
+        "https://github.com/love2d/love",
+        "https://github.com/leafo/lapis",
+        "https://github.com/minetest/minetest",
+        "https://www.codecademy.com/learn/learn-lua",
+        "https://www.classcentral.com/subject/lua",
+        "https://www.udemy.com/topic/lua/",
+        "https://www.reddit.com/r/lua/",
+        "https://learn-lua.com/",
+        "https://www.lua.org/pil/contents.html",
+        "http://lua-users.org/wiki/",
+        "http://luajit.org/",
+        "https://coronalabs.com/",
+        "https://giderosmobile.com/",
+        "https://solar2d.com/",
+        "https://fivem.net/",
+        "https://mods.factorio.com/"
+    ],
+    "C": [
+        "http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf",
+        "http://c-faq.com/",
+        "https://stackoverflow.com/questions/tagged/c",
+        "https://github.com/search?q=language%3Ac",
+        "https://github.com/torvalds/linux",
+        "https://github.com/bminor/glibc",
+        "https://www.learn-c.org/",
+        "https://www.codecademy.com/learn/paths/c",
+        "https://www.programiz.com/c-programming",
+        "https://www.geeksforgeeks.org/c-programming-language/",
+        "https://www.tutorialspoint.com/cprogramming/",
+        "https://www.w3schools.com/c/",
+        "https://www.c4learn.com/",
+        "https://www.sanfoundry.com/c-programming-examples/",
+        "https://codeforwin.org/c-programming/",
+        "https://fresh2refresh.com/c-programming/",
+        "https://www.tutorialsteacher.com/c",
+        "https://www.includehelp.com/c-programming-tutorial.aspx",
+        "https://www.journaldev.com/c-programming",
+        "https://www.careerride.com/C-Programming.aspx"
+    ],
+    "C++": [
+        "https://en.cppreference.com/w/",
+        "https://stackoverflow.com/questions/tagged/c%2B%2B",
+        "https://github.com/search?q=language%3Acpp",
+        "https://github.com/llvm/llvm-project",
+        "https://github.com/qt/qt5",
+        "https://www.learncpp.com/",
+        "https://www.codecademy.com/learn/learn-c-plus-plus",
+        "https://www.cplusplus.com/",
+        "https://www.geeksforgeeks.org/c-plus-plus/",
+        "https://www.tutorialspoint.com/cplusplus/",
+        "https://www.programiz.com/cpp-programming",
+        "https://www.w3schools.com/cpp/",
+        "https://fresh2refresh.com/c-plus-plus-tutorial/",
+        "https://www.tutorialsteacher.com/cpp",
+        "https://www.includehelp.com/cpp-tutorial.aspx",
+        "https://www.journaldev.com/c-plus-plus",
+        "https://www.careerride.com/C-Plus-Plus.aspx",
+        "https://codeforwin.org/c-programming/",
+        "https://www.sanfoundry.com/c-plus-plus-programming-examples/",
+        "http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/n4860.pdf"
+    ],
+    "Objective-C": [
+        "https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ProgrammingWithObjectiveC/Introduction/Introduction.html",
+        "https://www.objc.io/",
+        "https://nshipster.com/",
+        "https://stackoverflow.com/questions/tagged/objective-c",
+        "https://github.com/search?q=language%3Aobjective-c",
+        "https://github.com/AFNetworking/AFNetworking",
+        "https://github.com/CocoaPods/CocoaPods",
+        "https://www.tutorialspoint.com/objective_c/",
+        "https://www.raywenderlich.com/category/objective-c",
+        "https://www.appcoda.com/category/objective-c/",
+        "https://iosdevelopertips.com/",
+        "https://www.cocoacontrols.com/",
+        "https://cocoawithlove.com/",
+        "https://useyourloaf.com/",
+        "https://iachieved.it/iachievedit/",
+        "https://nshipster.com/author/mattt/",
+        "http://www.fluffycat.com/",
+        "https://qualitycoding.org/",
+        "https://codingexplorer.com/",
+        "https://developer.apple.com/wwdc20/academy/"
+    ],
+    "C#": [
+        "https://docs.microsoft.com/en-us/dotnet/csharp/",
+        "https://dotnet.microsoft.com/en-us/learn/csharp",
+        "https://stackoverflow.com/questions/tagged/c%23",
+        "https://github.com/search?q=language%3Acsharp",
+        "https://github.com/dotnet/runtime",
+        "https://github.com/dotnet/aspnetcore",
+        "https://www.codecademy.com/learn/learn-c-sharp",
+        "https://www.pluralsight.com/search?q=c%23",
+        "https://www.udemy.com/topic/c-sharp/",
+        "https://www.edx.org/learn/c-sharp",
+        "https://www.coursera.org/courses?query=c%23",
+        "https://www.tutorialspoint.com/csharp/",
+        "https://www.w3schools.com/cs/",
+        "https://learnvisualstudio.net/",
+        "https://www.c-sharpcorner.com/",
+        "https://www.dotnetcurry.com/",
+        "https://www.codeproject.com/KB/cs/",
+        "https://dzone.com/articles?tag=csharp",
+        "https://www.infoq.com/csharp/",
+        "https://mva.microsoft.com/en-us/training-courses/csharp-fundamentals-8292?l=1N1Z4w6l_5604192092"
+    ],
+    "Ruby": [
+        "https://ruby-doc.org/",
+        "https://stackoverflow.com/questions/tagged/ruby",
+        "https://github.com/search?q=language%3Aruby",
+        "https://github.com/rails/rails",
+        "https://github.com/ruby/ruby",
+        "https://www.codecademy.com/learn/learn-ruby",
+        "https://www.learnrubyonline.org/",
+        "https://rubymonk.com/",
+        "https://www.tutorialspoint.com/ruby/",
+        "https://www.programiz.com/ruby-programming",
+        "https://www.geeksforgeeks.org/ruby-programming-language/",
+        "https://www.w3schools.com/ruby/",
+        "https://www.ruby-lang.org/en/documentation/quickstart/",
+        "http://poignantguide.net/",
+        "https://rubykoans.com/",
+        "https://graceful.dev/",
+        "http://railscasts.com/",
+        "https://gorails.com/",
+        "https://rubyweekly.com/",
+        "https://www.rubyinside.com/"
+    ],
+    "JavaScript": [
+        "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+        "https://stackoverflow.com/questions/tagged/javascript",
+        "https://github.com/search?q=language%3Ajavascript",
+        "https://github.com/nodejs/node",
+        "https://github.com/facebook/react",
+        "https://www.codecademy.com/learn/introduction-to-javascript",
+        "https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures/",
+        "https://learnjavascript.online/",
+        "https://www.w3schools.com/js/",
+        "https://www.tutorialspoint.com/javascript/",
+        "https://www.programiz.com/javascript",
+        "https://www.geeksforgeeks.org/javascript-tutorial/",
+        "https://javascript.info/",
+        "https://eloquentjavascript.net/",
+        "https://github.com/getify/You-Dont-Know-JS",
+        "https://javascriptweekly.com/",
+        "https://www.sitepoint.com/javascript/",
+        "https://www.smashingmagazine.com/category/javascript",
+        "https://css-tricks.com/category/javascript/",
+        "https://dev.to/t/javascript"
+    ],
+    "TypeScript": [
+        "https://www.typescriptlang.org/docs/",
+        "https://stackoverflow.com/questions/tagged/typescript",
+        "https://github.com/search?q=language%3Atypescript",
+        "https://github.com/angular/angular",
+        "https://github.com/microsoft/TypeScript",
+        "https://www.codecademy.com/learn/learn-typescript",
+        "https://learntypescript.online/",
+        "https://www.tutorialspoint.com/typescript/",
+        "https://www.w3schools.com/typescript/",
+        "https://www.programiz.com/typescript",
+        "https://www.geeksforgeeks.org/typescript/",
+        "https://basarat.gitbook.io/typescript/",
+        "https://www.typescriptlang.org/docs/handbook/",
+        "https://basarat.gitbook.io/typescript/",
+        "https://egghead.io/technologies/typescript",
+        "https://www.pluralsight.com/search?q=typescript",
+        "https://www.udemy.com/topic/typescript/",
+        "https://www.edx.org/learn/typescript",
+        "https://www.coursera.org/courses?query=typescript",
+        "https://learn.microsoft.com/en-us/training/paths/typescript/"
+    ]
+}
+
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
 for lang in LANGUAGES:
@@ -239,8 +463,9 @@ class OxylabsClient:
             payload = {
                 "source": "universal",
                 "url": url,
-                "parse": True,
-                "render": "html" if render else None
+                "parse": False,  # Get raw HTML instead of parsed content
+                "render": "html" if render else None,
+                "premium_proxy": "true"  # Use premium proxies for better success rate
             }
             
             try:
@@ -759,8 +984,8 @@ class SimulationClient:
         return self._create_mock_response("<html><body>Default mock response</body></html>")
 
 
-class BaseScraper:
-    """Base class for platform-specific scrapers."""
+class WebsiteScraper:
+    """Base class for all website-specific scrapers."""
     
     def __init__(self, scraper_api_client: ScraperAPIClient, oxylabs_client: OxylabsClient, code_data: CodeData, simulation_client=None):
         self.scraper_api_client = scraper_api_client
@@ -791,14 +1016,38 @@ class BaseScraper:
         with self.lock:
             self.visited_urls.add(url)
     
+    def get_page_content(self, url: str, render: bool = False) -> Optional[str]:
+        """Get the HTML content of a page using the available APIs."""
+        if self.is_url_visited(url):
+            logger.info(f"Skipping already visited URL: {url}")
+            return None
+            
+        api_client, api_name = self._select_api()
+        logger.info(f"Fetching {url} using {api_name}")
+        
+        try:
+            response = api_client.get(url, render=render)
+            if not response:
+                logger.error(f"Failed to get response from {url}")
+                return None
+                
+            self.mark_url_visited(url)
+            return response.text
+        except Exception as e:
+            logger.error(f"Error getting page content for {url}: {str(e)}")
+            logger.error(f"Exception details: {traceback.format_exc()}")
+            return None
+    
     def extract_code_blocks(self, html_content: str) -> List[Tuple[str, Optional[str]]]:
-        """
-        Extract code blocks from HTML content with improved language detection.
-        """
+        """Extract code blocks from HTML with language detection."""
+        if not html_content:
+            return []
+            
         soup = BeautifulSoup(html_content, 'html.parser')
         code_blocks = []
         
-        # Extract from <pre><code> blocks
+        # Try multiple code block extraction strategies
+        # 1. <pre><code> blocks (common on documentation sites and markdown)
         for pre in soup.find_all('pre'):
             code = pre.find('code')
             if code:
@@ -816,7 +1065,7 @@ class BaseScraper:
                 
                 code_blocks.append((code.text.strip(), language))
         
-        # Extract from standalone <code> blocks
+        # 2. Standalone <code> blocks
         for code in soup.find_all('code', class_=True):
             if code.parent.name != 'pre':
                 class_list = code.get('class')
@@ -833,10 +1082,394 @@ class BaseScraper:
                     language = LanguageDetector.detect_from_content(code.text)
                 
                 code_blocks.append((code.text.strip(), language))
+                
+        # 3. Generic <pre> blocks without <code> tags
+        for pre in soup.find_all('pre'):
+            if not pre.find('code') and pre.text.strip():
+                language = LanguageDetector.detect_from_content(pre.text)
+                if language:
+                    code_blocks.append((pre.text.strip(), language))
+        
+        # 4. Look for syntax-highlighted div blocks (common in documentation)
+        for div in soup.find_all(['div', 'section'], class_=['highlight', 'code', 'codehilite', 'syntax']):
+            language = None
+            
+            # Try to detect language from class
+            if div.get('class'):
+                for cls in div.get('class'):
+                    for lang in LANGUAGES:
+                        if lang.lower() in cls.lower():
+                            language = lang
+                            break
+            
+            # If no language detected from class, try content
+            if not language:
+                language = LanguageDetector.detect_from_content(div.text)
+            
+            if language:
+                code_blocks.append((div.text.strip(), language))
         
         return code_blocks
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Base method for scraping a URL. Should be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement scrape_url method")
 
-class GitHubScraper(BaseScraper):
+class SiteClassifier:
+    """Classifies websites to determine the appropriate scraper."""
+    
+    @staticmethod
+    def classify_url(url: str) -> str:
+        """Determine the type of website from a URL."""
+        domain = urlparse(url).netloc.lower()
+        path = urlparse(url).path.lower()
+        
+        # GitHub repositories
+        if ("github.com" in domain and 
+            ("/search" in path or 
+             (len(path.split('/')) > 2 and "blob" not in path))):
+            return "github_repo"
+            
+        # GitHub search
+        elif "github.com/search" in url:
+            return "github_search"
+            
+        # GitHub file
+        elif "github.com" in domain and "blob" in path:
+            return "github_file"
+            
+        # Stack Overflow
+        elif "stackoverflow.com" in domain:
+            return "stackoverflow"
+            
+        # Reddit
+        elif "reddit.com" in domain:
+            return "forum"
+            
+        # Documentation sites
+        elif any(doc_site in domain for doc_site in [
+                "docs.", "documentation.", ".org/docs", "developer.", 
+                "reference", ".io/docs", "manual", "handbook"
+            ]):
+            return "documentation"
+            
+        # Tutorial sites
+        elif any(tutorial_site in domain for tutorial_site in [
+                "tutorial", "learn", "w3schools", "geeksforgeeks", 
+                "tutorialspoint", "programiz", "codecademy", "freecodecamp",
+                "coursera", "udemy", "edx", "pluralsight"
+            ]):
+            return "tutorial"
+            
+        # Default to generic website
+        return "generic"
+
+class StackOverflowScraper(WebsiteScraper):
+    """Specialized scraper for Stack Overflow."""
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Scrape code examples from Stack Overflow."""
+        logger.info(f"Scraping Stack Overflow URL: {url}")
+        
+        html_content = self.get_page_content(url, render=True)
+        if not html_content:
+            return 0
+            
+        soup = BeautifulSoup(html_content, 'html.parser')
+        items_added = 0
+        
+        # Extract answers which are more likely to contain code
+        answers = soup.select('.answer')
+        if not answers:
+            # Try alternative selectors
+            answers = soup.select('.js-answer')
+            if not answers:
+                answers = soup.select('[data-answerid]')
+        
+        for answer in answers:
+            # Extract vote count to prioritize higher-voted answers
+            vote_elem = answer.select_one('.js-vote-count, .vote-count-post')
+            votes = 0
+            if vote_elem:
+                try:
+                    votes = int(vote_elem.get_text().strip())
+                except:
+                    pass
+            
+            # Extract code blocks from the answer
+            code_elements = answer.select('pre code')
+            for i, code_elem in enumerate(code_elements):
+                code_text = code_elem.get_text().strip()
+                if not code_text:
+                    continue
+                    
+                # Try to detect language
+                detected_language = None
+                
+                # Look for language hint in class
+                if code_elem.get('class'):
+                    classes = code_elem.get('class')
+                    lang_classes = [c for c in classes if c.startswith(('lang-', 'language-'))]
+                    if lang_classes:
+                        lang_hint = lang_classes[0].split('-', 1)[1].lower()
+                        detected_language = next((l for l in LANGUAGES if l.lower() == lang_hint), None)
+                
+                # If no language hint or doesn't match target, use content detection
+                if not detected_language:
+                    detected_language = LanguageDetector.detect_from_content(code_text)
+                    
+                # If still no detection and we have a target language, use it
+                if not detected_language and language:
+                    detected_language = language
+                
+                # Only add if language matches target or we detected something
+                if detected_language and (not language or detected_language == language):
+                    # Get question title for metadata
+                    title_elem = soup.select_one('h1[itemprop="name"], .question-hyperlink')
+                    title = title_elem.get_text().strip() if title_elem else "Stack Overflow Question"
+                    
+                    # Add code to dataset
+                    self.code_data.add_item(
+                        language=detected_language,
+                        item_type="snippet",
+                        content=code_text,
+                        source_url=url,
+                        metadata={
+                            "title": title,
+                            "votes": votes,
+                            "platform": "Stack Overflow",
+                            "snippet_index": i
+                        }
+                    )
+                    items_added += 1
+        
+        logger.info(f"Added {items_added} code snippets from Stack Overflow page {url}")
+        return items_added
+
+class DocumentationScraper(WebsiteScraper):
+    """Specialized scraper for documentation websites."""
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Scrape code examples from documentation sites."""
+        logger.info(f"Scraping documentation URL: {url}")
+        
+        html_content = self.get_page_content(url, render=True)
+        if not html_content:
+            return 0
+            
+        soup = BeautifulSoup(html_content, 'html.parser')
+        items_added = 0
+        
+        # Extract code blocks using the base method
+        code_blocks = self.extract_code_blocks(html_content)
+        
+        # Get page title for metadata
+        title_elem = soup.select_one('title')
+        title = title_elem.get_text().strip() if title_elem else urlparse(url).netloc
+        
+        # Try to find section headers for better context
+        headers = soup.select('h1, h2, h3')
+        page_headers = [h.get_text().strip() for h in headers if h.get_text().strip()]
+        
+        for i, (code_text, detected_language) in enumerate(code_blocks):
+            # Skip empty or very short code
+            if not code_text or len(code_text) < 10:
+                continue
+                
+            # If language wasn't detected, use target language
+            if not detected_language and language:
+                detected_language = language
+                
+            # Only add if language matches target or we detected something
+            if detected_language and (not language or detected_language == language):
+                # Add code to dataset
+                self.code_data.add_item(
+                    language=detected_language,
+                    item_type="snippet",
+                    content=code_text,
+                    source_url=url,
+                    metadata={
+                        "title": title,
+                        "page_headers": page_headers[:3],  # Include top headers for context
+                        "platform": "Documentation",
+                        "domain": urlparse(url).netloc,
+                        "snippet_index": i
+                    }
+                )
+                items_added += 1
+        
+        logger.info(f"Added {items_added} code snippets from documentation page {url}")
+        return items_added
+
+class TutorialScraper(WebsiteScraper):
+    """Specialized scraper for tutorial websites."""
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Scrape code examples from tutorial sites."""
+        logger.info(f"Scraping tutorial URL: {url}")
+        
+        html_content = self.get_page_content(url, render=True)
+        if not html_content:
+            return 0
+            
+        soup = BeautifulSoup(html_content, 'html.parser')
+        items_added = 0
+        
+        # Extract code blocks using the base method
+        code_blocks = self.extract_code_blocks(html_content)
+        
+        # Get page title for metadata
+        title_elem = soup.select_one('title')
+        title = title_elem.get_text().strip() if title_elem else urlparse(url).netloc
+        
+        # Extract explanatory text near code blocks for context
+        article_content = soup.select_one('article, .article, .content, main, #content, .tutorial-content')
+        explanations = []
+        
+        if article_content:
+            # Find paragraphs that might explain the code
+            paragraphs = article_content.select('p')
+            explanations = [p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 30]
+        
+        for i, (code_text, detected_language) in enumerate(code_blocks):
+            # Skip empty or very short code
+            if not code_text or len(code_text) < 10:
+                continue
+                
+            # If language wasn't detected, use target language
+            if not detected_language and language:
+                detected_language = language
+                
+            # Only add if language matches target or we detected something
+            if detected_language and (not language or detected_language == language):
+                # Try to find nearby explanation
+                nearby_explanation = ""
+                if i < len(explanations):
+                    nearby_explanation = explanations[i]
+                
+                # Add code to dataset
+                self.code_data.add_item(
+                    language=detected_language,
+                    item_type="snippet",
+                    content=code_text,
+                    source_url=url,
+                    metadata={
+                        "title": title,
+                        "explanation": nearby_explanation[:500],  # Include some explanation if available
+                        "platform": "Tutorial",
+                        "domain": urlparse(url).netloc,
+                        "snippet_index": i
+                    }
+                )
+                items_added += 1
+        
+        logger.info(f"Added {items_added} code snippets from tutorial page {url}")
+        return items_added
+
+class ForumScraper(WebsiteScraper):
+    """Specialized scraper for forum websites like Reddit."""
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Scrape code examples from forum sites."""
+        logger.info(f"Scraping forum URL: {url}")
+        
+        html_content = self.get_page_content(url, render=True)
+        if not html_content:
+            return 0
+            
+        soup = BeautifulSoup(html_content, 'html.parser')
+        items_added = 0
+        
+        # Extract code blocks using the base method
+        code_blocks = self.extract_code_blocks(html_content)
+        
+        # Get page title for metadata
+        title_elem = soup.select_one('title')
+        title = title_elem.get_text().strip() if title_elem else urlparse(url).netloc
+        
+        # Find post content and comments
+        comments = soup.select('.comment, .Post, [data-testid="comment"], .comment-body')
+        
+        for i, (code_text, detected_language) in enumerate(code_blocks):
+            # Skip empty or very short code
+            if not code_text or len(code_text) < 10:
+                continue
+                
+            # If language wasn't detected, use target language
+            if not detected_language and language:
+                detected_language = language
+                
+            # Only add if language matches target or we detected something
+            if detected_language and (not language or detected_language == language):
+                # Add code to dataset
+                self.code_data.add_item(
+                    language=detected_language,
+                    item_type="snippet",
+                    content=code_text,
+                    source_url=url,
+                    metadata={
+                        "title": title,
+                        "platform": "Forum",
+                        "domain": urlparse(url).netloc,
+                        "snippet_index": i
+                    }
+                )
+                items_added += 1
+        
+        logger.info(f"Added {items_added} code snippets from forum page {url}")
+        return items_added
+
+class GenericScraper(WebsiteScraper):
+    """Fallback scraper for any website not covered by specialized scrapers."""
+    
+    def scrape_url(self, url: str, language: str) -> int:
+        """Scrape code examples from any website."""
+        logger.info(f"Scraping generic URL: {url}")
+        
+        html_content = self.get_page_content(url, render=True)
+        if not html_content:
+            return 0
+            
+        soup = BeautifulSoup(html_content, 'html.parser')
+        items_added = 0
+        
+        # Extract code blocks using the base method
+        code_blocks = self.extract_code_blocks(html_content)
+        
+        # Get page title for metadata
+        title_elem = soup.select_one('title')
+        title = title_elem.get_text().strip() if title_elem else urlparse(url).netloc
+        
+        for i, (code_text, detected_language) in enumerate(code_blocks):
+            # Skip empty or very short code
+            if not code_text or len(code_text) < 10:
+                continue
+                
+            # If language wasn't detected, use target language
+            if not detected_language and language:
+                detected_language = language
+                
+            # Only add if language matches target or we detected something
+            if detected_language and (not language or detected_language == language):
+                # Add code to dataset
+                self.code_data.add_item(
+                    language=detected_language,
+                    item_type="snippet",
+                    content=code_text,
+                    source_url=url,
+                    metadata={
+                        "title": title,
+                        "platform": "Website",
+                        "domain": urlparse(url).netloc,
+                        "snippet_index": i
+                    }
+                )
+                items_added += 1
+        
+        logger.info(f"Added {items_added} code snippets from generic page {url}")
+        return items_added
+
+class GitHubScraper(WebsiteScraper):
     """Scraper for GitHub repositories and snippets."""
     
     def search_repositories(self, language: str, max_pages: int = 10):
@@ -1117,7 +1750,7 @@ class GitHubScraper(BaseScraper):
             logger.error(f"Exception details: {traceback.format_exc()}")
 
 class CodeCrawler:
-    """Main crawler class that coordinates the scraping process."""
+    """Main crawler class that coordinates the scraping process across various websites."""
     
     def __init__(self, scraper_api_key=SCRAPER_API_KEY, oxylabs_username=OXYLABS_USERNAME, 
                  oxylabs_password=OXYLABS_PASSWORD, data_dir=DATA_DIR, simulation_mode=SIMULATION_MODE):
@@ -1136,7 +1769,7 @@ class CodeCrawler:
         # Initialize simulation client only if in simulation mode
         self.simulation_client = SimulationClient() if simulation_mode else None
         
-        # Initialize platform-specific scrapers
+        # Initialize all specialized scrapers
         self.github_scraper = GitHubScraper(
             self.scraper_api_client, 
             self.oxylabs_client, 
@@ -1144,27 +1777,190 @@ class CodeCrawler:
             self.simulation_client
         )
         
-    def crawl_language(self, language: str, max_items: int = 10):
-        """Crawl GitHub for a specific language."""
-        if language not in LANGUAGES:
-            logger.error(f"Unsupported language: {language}")
-            return
+        self.stackoverflow_scraper = StackOverflowScraper(
+            self.scraper_api_client,
+            self.oxylabs_client,
+            self.code_data,
+            self.simulation_client
+        )
         
-        # Calculate number of pages to search (assuming ~10 repos per page)
-        # Minimum 5 pages, maximum 20 pages to avoid excessive requests
-        pages_to_search = min(max(5, max_items // 5), 20)
+        self.documentation_scraper = DocumentationScraper(
+            self.scraper_api_client,
+            self.oxylabs_client,
+            self.code_data,
+            self.simulation_client
+        )
+        
+        self.tutorial_scraper = TutorialScraper(
+            self.scraper_api_client,
+            self.oxylabs_client,
+            self.code_data,
+            self.simulation_client
+        )
+        
+        self.forum_scraper = ForumScraper(
+            self.scraper_api_client,
+            self.oxylabs_client,
+            self.code_data,
+            self.simulation_client
+        )
+        
+        self.generic_scraper = GenericScraper(
+            self.scraper_api_client,
+            self.oxylabs_client,
+            self.code_data,
+            self.simulation_client
+        )
+        
+        # Site classifier for determining the appropriate scraper
+        self.site_classifier = SiteClassifier()
+        
+    def get_scraper_for_url(self, url: str):
+        """Determine the appropriate scraper to use for a given URL."""
+        site_type = self.site_classifier.classify_url(url)
+        
+        if site_type == "github_search" or site_type == "github_repo":
+            return self.github_scraper, "GitHub"
+        elif site_type == "github_file":
+            return self.github_scraper, "GitHub File"
+        elif site_type == "stackoverflow":
+            return self.stackoverflow_scraper, "Stack Overflow"
+        elif site_type == "documentation":
+            return self.documentation_scraper, "Documentation"
+        elif site_type == "tutorial":
+            return self.tutorial_scraper, "Tutorial"
+        elif site_type == "forum":
+            return self.forum_scraper, "Forum"
+        else:
+            return self.generic_scraper, "Generic Website"
+    
+    def crawl_url(self, url: str, language: str, max_attempts: int = 3):
+        """Crawl a specific URL for code in the target language."""
+        scraper, site_type = self.get_scraper_for_url(url)
+        
+        logger.info(f"Crawling {site_type} URL: {url} for {language}")
+        
+        # Special handling for GitHub repository URLs
+        if site_type == "GitHub" and "/search" not in url:
+            try:
+                # For GitHub repos, use the specialized repo exploration logic
+                logger.info(f"Using specialized GitHub repository exploration for {url}")
+                
+                # If it's a GitHub search URL, use search_repositories method
+                if "search?q=language" in url:
+                    # Extract language from search URL if possible
+                    lang_in_url = language
+                    try:
+                        lang_param = re.search(r'language%3A([^&]+)', url)
+                        if lang_param:
+                            extracted_lang = lang_param.group(1).lower()
+                            lang_in_url = next((l for l in LANGUAGES if l.lower() == extracted_lang), language)
+                    except:
+                        pass
+                        
+                    # Calculate pages to search based on target items
+                    pages_to_search = min(max(5, ITEMS_PER_LANGUAGE // 10), 20)
+                    self.github_scraper.search_repositories(lang_in_url, max_pages=pages_to_search)
+                    return True
+                else:
+                    # Regular GitHub repo, explore directly
+                    metadata = {
+                        "name": url.split('/')[-1],
+                        "description": f"GitHub repository for {language}",
+                        "stars": 0,
+                        "forks": 0,
+                        "platform": "GitHub"
+                    }
+                    
+                    # For GitHub repos, we can use visit_repository
+                    self.github_scraper.visit_repository(url, language, metadata)
+                    return True
+            except Exception as e:
+                logger.error(f"Error crawling GitHub repository {url}: {str(e)}")
+                logger.error(f"Exception details: {traceback.format_exc()}")
+                return False
+        else:
+            # For all other URLs, use the appropriate scraper's scrape_url method
+            attempts = 0
+            while attempts < max_attempts:
+                try:
+                    items_added = scraper.scrape_url(url, language)
+                    if items_added > 0:
+                        logger.info(f"Successfully extracted {items_added} code samples from {url}")
+                        return True
+                    else:
+                        logger.warning(f"No code samples found at {url}")
+                        attempts += 1
+                except Exception as e:
+                    logger.error(f"Error scraping {url} (attempt {attempts+1}/{max_attempts}): {str(e)}")
+                    logger.error(f"Exception details: {traceback.format_exc()}")
+                    attempts += 1
+                    time.sleep(2)  # Wait before retry
             
-        logger.info(f"Starting GitHub crawl for {language} (target: {max_items} items, searching {pages_to_search} pages)")
-        self.github_scraper.search_repositories(language, max_pages=pages_to_search)
+            logger.error(f"Failed to scrape {url} after {max_attempts} attempts")
+            return False
+    
+    def crawl_language_urls(self, language: str, max_items: int = None):
+        """Crawl all target URLs for a specific language."""
+        if language not in LANGUAGES or language not in TARGET_URLS:
+            logger.error(f"Unsupported language or no target URLs: {language}")
+            return 0
+        
+        urls = TARGET_URLS[language]
+        if not urls:
+            logger.warning(f"No target URLs found for {language}")
+            return 0
+        
+        logger.info(f"Starting crawl for {language} with {len(urls)} target URLs")
+        
+        successful_urls = 0
+        target_urls = urls.copy()
+        
+        # If max_items is set, we might want to prioritize certain URLs
+        if max_items:
+            # Prioritize GitHub repos and official documentation
+            target_urls.sort(key=lambda u: (
+                0 if "github.com" in u and "/search" not in u else  # GitHub repos first
+                1 if ".org/docs" in u or "docs." in u else  # Documentation second
+                2 if "stackoverflow.com" in u else  # Stack Overflow third
+                3  # Everything else
+            ))
+        
+        # Process all URLs for this language
+        for url in target_urls:
+            if self.crawl_url(url, language):
+                successful_urls += 1
+                
+            # Save progress incrementally
+            if successful_urls % 5 == 0:
+                self.code_data.save_data(language)
+        
+        logger.info(f"Completed crawl for {language}: processed {successful_urls}/{len(urls)} URLs successfully")
+        return successful_urls
         
     def crawl_all_languages(self, items_per_language=ITEMS_PER_LANGUAGE):
-        """Crawl for all supported languages."""
-        for language in LANGUAGES:  # Process all supported languages
-            self.crawl_language(language, max_items=items_per_language)
+        """Crawl target URLs for all supported languages."""
+        total_successful = 0
         
+        for language in LANGUAGES:
+            # Check if we have target URLs for this language
+            if language in TARGET_URLS and TARGET_URLS[language]:
+                successful = self.crawl_language_urls(language, max_items=items_per_language)
+                total_successful += successful
+                logger.info(f"Completed {language}: {successful} URLs successfully processed")
+                
+                # Save progress after each language
+                self.code_data.save_data(language)
+            else:
+                logger.warning(f"Skipping {language}: no target URLs defined")
+        
+        # Generate final dataset and summary
         self.code_data.save_data()
         self.code_data.export_dataset()
         self.generate_summary()
+        
+        logger.info(f"Crawl completed: processed {total_successful} URLs successfully")
+        return total_successful
     
     def generate_summary(self):
         """Generate and save a summary of collected data."""
@@ -1215,25 +2011,42 @@ class CodeCrawler:
         print("="*50 + "\n")
 
 def main():
-    """Main function to run the code crawler."""
-    logger.info("Starting Code Crawler with hardcoded credentials")
+    """Main function to run the comprehensive code crawler."""
+    logger.info("Starting Enhanced Code Crawler with hardcoded credentials")
     
     try:
         # Create crawler with hardcoded credentials
         crawler = CodeCrawler(SCRAPER_API_KEY, OXYLABS_USERNAME, OXYLABS_PASSWORD, DATA_DIR)
         
-        # Set simulation mode to False to use real APIs instead of simulation
+        # Set simulation mode to False to use real APIs with raw HTML
         crawler.simulation_mode = False
         
+        print("\n" + "="*80)
+        print(" ENHANCED CODE CRAWLER".center(80))
+        print("="*80)
+        print(f" Target: {len(LANGUAGES)} languages with {sum(len(urls) for urls in TARGET_URLS.values())} total URLs")
+        print(f" APIs: ScraperAPI and Oxylabs (HTML mode)")
+        print(f" Output Directory: {DATA_DIR}")
+        print("="*80 + "\n")
+        
         # Use the default ITEMS_PER_LANGUAGE value (1000) for a full production crawl
-        # This will substantially increase the amount of data collected
-        crawler.crawl_all_languages()
+        # Crawl all target URLs for all languages
+        successful_urls = crawler.crawl_all_languages()
+        
+        print("\n" + "="*80)
+        print(" CRAWL COMPLETE".center(80))
+        print("="*80)
+        print(f" Successfully processed {successful_urls} URLs")
+        print(f" Results saved to {DATA_DIR}")
+        print(f" Summary available at {os.path.join(DATA_DIR, 'crawl_summary.json')}")
+        print("="*80 + "\n")
         
         logger.info("Code crawling completed successfully")
     except Exception as e:
         logger.error(f"Fatal error in main: {str(e)}")
         logger.error(f"Exception details: {traceback.format_exc()}")
-        print(f"Error: {str(e)}")
+        print(f"\nERROR: {str(e)}")
+        print("See logs for detailed error information.")
 
 if __name__ == "__main__":
     main()
