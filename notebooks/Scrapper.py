@@ -694,6 +694,11 @@ class SimulationClient:
         
         code = self.code_samples.get(language, f"// Sample code for {language}\nfunction example() {{\n    return 'example';\n}}")
         
+        # Split the code into lines before using in f-string
+        code_lines = code.split('\n')
+        first_line = code_lines[0] if code_lines else ""
+        second_line = code_lines[1] if len(code_lines) > 1 else ""
+        
         html = f"""
         <html>
         <body>
@@ -701,10 +706,10 @@ class SimulationClient:
                 <table class="highlight">
                     <tbody>
                         <tr>
-                            <td class="blob-code">{code.split('\\n')[0]}</td>
+                            <td class="blob-code">{first_line}</td>
                         </tr>
                         <tr>
-                            <td class="blob-code">{code.split('\\n')[1] if len(code.split('\\n')) > 1 else ''}</td>
+                            <td class="blob-code">{second_line}</td>
                         </tr>
                     </tbody>
                 </table>
