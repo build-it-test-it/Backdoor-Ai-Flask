@@ -769,7 +769,7 @@ class BaseScraper:
         self.visited_urls = set()
         self.lock = Lock()
         self.api_selector = 0
-        self.use_simulation = SIMULATION_MODE or simulation_client is not None
+        self.use_simulation = simulation_client is not None
     
     def _select_api(self) -> tuple:
         """Select the next API to use in a round-robin fashion with simulation fallback."""
@@ -1011,8 +1011,8 @@ class CodeCrawler:
         logger.info(f"Oxylabs Username: {oxylabs_username}")
         logger.info(f"Oxylabs Password: {oxylabs_password}")
         
-        # Initialize simulation client if in simulation mode or for fallback
-        self.simulation_client = SimulationClient()
+        # Initialize simulation client only if in simulation mode
+        self.simulation_client = SimulationClient() if simulation_mode else None
         
         # Initialize platform-specific scrapers
         self.github_scraper = GitHubScraper(
