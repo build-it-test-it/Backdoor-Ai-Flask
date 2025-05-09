@@ -9,6 +9,7 @@ This version includes:
 - Enhanced language detection
 - Improved error handling
 - HARDCODED CREDENTIALS as requested
+- Fallback simulation mode when APIs fail
 """
 
 import os
@@ -51,6 +52,9 @@ DATA_DIR = "collected_data"
 ITEMS_PER_LANGUAGE = 1000
 MAX_WORKERS = 8
 REQUEST_TIMEOUT = 60
+
+# Enable simulation mode for testing when APIs fail
+SIMULATION_MODE = True  # Set to False to use real APIs
 
 # Supported programming languages
 LANGUAGES = ["Swift", "Python", "Lua", "C", "C++", "Objective-C", "C#", "Ruby", "JavaScript", "TypeScript"]
@@ -124,7 +128,7 @@ class ScraperAPIClient:
         """Create a ScraperAPI proxy URL for the target URL."""
         params = {
             "api_key": self.api_key,
-            "url": quote_plus(url),
+            "url": url,
         }
         if render:
             params["render"] = "true"
@@ -561,19 +565,212 @@ class CodeData:
         except Exception as e:
             logger.error(f"Error exporting dataset: {str(e)}")
 
+class SimulationClient:
+    """Simulation client for testing when APIs fail or for offline development."""
+    
+    def __init__(self):
+        self.logger = logging.getLogger("CodeCrawler")
+        self.logger.info("Using Simulation Client - generating mock data for testing")
+        
+        # Sample repository data for different languages
+        self.repos_by_language = {
+            lang: self._generate_mock_repos(lang, 20) for lang in LANGUAGES
+        }
+        
+        # Sample code snippets by language
+        self.code_samples = {
+            "Swift": """import Foundation\n\nfunc helloWorld() -> String {\n    return "Hello, world!"\n}\n\nprint(helloWorld())""",
+            "Python": """import os\nimport sys\n\ndef hello_world():\n    return "Hello, World!"\n\nif __name__ == "__main__":\n    print(hello_world())""",
+            "C": """#include <stdio.h>\n\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}""",
+            "C++": """#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}""",
+            "JavaScript": """const helloWorld = () => {\n    return "Hello, World!";\n};\n\nconsole.log(helloWorld());""",
+            "TypeScript": """function helloWorld(): string {\n    return "Hello, World!";\n}\n\nconsole.log(helloWorld());"""
+        }
+        
+        # Fill in any missing languages with generic code
+        for lang in LANGUAGES:
+            if lang not in self.code_samples:
+                self.code_samples[lang] = f"""// Sample code for {lang}\nfunction helloWorld() {{\n    print("Hello, World!")\n}}\n\nhelloWorld()"""
+    
+    def _generate_mock_repos(self, language, count):
+        """Generate mock repository data for a language."""
+        repos = []
+        for i in range(1, count + 1):
+            repo_name = f"example-{language.lower()}-{i}"
+            repos.append({
+                "name": repo_name,
+                "url": f"https://github.com/user/{repo_name}",
+                "description": f"Example {language} repository #{i}",
+                "stars": random.randint(0, 1000),
+                "forks": random.randint(0, 500)
+            })
+        return repos
+    
+    def _create_mock_response(self, content, status_code=200):
+        """Create a mock response object similar to requests.Response."""
+        class MockResponse:
+            def __init__(self, text, status_code):
+                self.text = text
+                self.content = text.encode('utf-8')
+                self.status_code = status_code
+            
+            def json(self):
+                try:
+                    return json.loads(self.text)
+                except:
+                    return {}
+        
+        return MockResponse(content, status_code)
+    
+    def _generate_github_search_html(self, language, page=1):
+        """Generate mock HTML for GitHub repository search results."""
+        repos = self.repos_by_language.get(language, [])
+        start_idx = (page - 1) * 10
+        end_idx = min(start_idx + 10, len(repos))
+        page_repos = repos[start_idx:end_idx]
+        
+        html = """
+        <html>
+        <body>
+            <ul class="repo-list">
+        """
+        
+        for repo in page_repos:
+            html += f"""
+                <li class="repo-list-item">
+                    <div>
+                        <a href="/{repo['name']}" class="v-align-middle">{repo['name']}</a>
+                        <p>{repo['description']}</p>
+                        <div>
+                            <a href="/{repo['name']}/stargazers">{repo['stars']}</a>
+                            <a href="/{repo['name']}/forks">{repo['forks']}</a>
+                        </div>
+                    </div>
+                </li>
+            """
+        
+        html += """
+            </ul>
+        </body>
+        </html>
+        """
+        
+        return html
+    
+    def _generate_github_repo_html(self, repo_url):
+        """Generate mock HTML for a GitHub repository page."""
+        repo_name = repo_url.split('/')[-1]
+        language = next((lang for lang in LANGUAGES if lang.lower() in repo_name.lower()), random.choice(LANGUAGES))
+        
+        stars = random.randint(0, 1000)
+        forks = random.randint(0, 500)
+        
+        html = f"""
+        <html>
+        <body>
+            <div>
+                <a href="/{repo_name}/stargazers">{stars}</a>
+                <a href="/{repo_name}/forks">{forks}</a>
+            </div>
+            <div>
+                <a role="row" href="/{repo_name}/blob/master/file1.{language.lower()}" data-pjax="#repo-content-pjax-container">file1.{language.lower()}</a>
+                <a role="row" href="/{repo_name}/blob/master/file2.{language.lower()}" data-pjax="#repo-content-pjax-container">file2.{language.lower()}</a>
+                <a role="row" href="/{repo_name}/tree/master/src" data-pjax="#repo-content-pjax-container">src</a>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html
+    
+    def _generate_file_content_html(self, file_url):
+        """Generate mock HTML for a file content page."""
+        file_name = file_url.split('/')[-1]
+        _, ext = os.path.splitext(file_name)
+        
+        language = LanguageDetector.detect_from_extension(file_name)
+        if not language:
+            language = random.choice(LANGUAGES)
+        
+        code = self.code_samples.get(language, f"// Sample code for {language}\nfunction example() {{\n    return 'example';\n}}")
+        
+        html = f"""
+        <html>
+        <body>
+            <div class="Box-body p-0 blob-wrapper data">
+                <table class="highlight">
+                    <tbody>
+                        <tr>
+                            <td class="blob-code">{code.split('\\n')[0]}</td>
+                        </tr>
+                        <tr>
+                            <td class="blob-code">{code.split('\\n')[1] if len(code.split('\\n')) > 1 else ''}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return html
+    
+    def get(self, url, render=False):
+        """Simulate a GET request and return mock data based on the URL."""
+        self.logger.info(f"Simulation fetching: {url}")
+        time.sleep(0.5)  # Simulate network delay
+        
+        # GitHub search URL
+        if url.startswith("https://github.com/search"):
+            params = url.split('?')[1].split('&')
+            language = None
+            for param in params:
+                if param.startswith('q=language'):
+                    language = param.split('%3A')[1].split('&')[0].lower()
+            page = 1
+            for param in params:
+                if param.startswith('p='):
+                    try:
+                        page = int(param.split('=')[1])
+                    except:
+                        pass
+            
+            language = next((lang for lang in LANGUAGES if lang.lower() == language), LANGUAGES[0])
+            html = self._generate_github_search_html(language, page)
+            return self._create_mock_response(html)
+        
+        # GitHub repository URL
+        elif url.startswith("https://github.com/") and url.count('/') == 4:
+            html = self._generate_github_repo_html(url)
+            return self._create_mock_response(html)
+        
+        # GitHub file URL
+        elif url.startswith("https://github.com/") and "blob/master" in url:
+            html = self._generate_file_content_html(url)
+            return self._create_mock_response(html)
+        
+        # Default response
+        return self._create_mock_response("<html><body>Default mock response</body></html>")
+
+
 class BaseScraper:
     """Base class for platform-specific scrapers."""
     
-    def __init__(self, scraper_api_client: ScraperAPIClient, oxylabs_client: OxylabsClient, code_data: CodeData):
+    def __init__(self, scraper_api_client: ScraperAPIClient, oxylabs_client: OxylabsClient, code_data: CodeData, simulation_client=None):
         self.scraper_api_client = scraper_api_client
         self.oxylabs_client = oxylabs_client
+        self.simulation_client = simulation_client
         self.code_data = code_data
         self.visited_urls = set()
         self.lock = Lock()
         self.api_selector = 0
+        self.use_simulation = SIMULATION_MODE or simulation_client is not None
     
     def _select_api(self) -> tuple:
-        """Select the next API to use in a round-robin fashion."""
+        """Select the next API to use in a round-robin fashion with simulation fallback."""
+        if self.use_simulation and self.simulation_client:
+            return (self.simulation_client, "Simulation")
+            
         with self.lock:
             self.api_selector = (self.api_selector + 1) % 2
             return (self.scraper_api_client, "ScraperAPI") if self.api_selector == 0 else (self.oxylabs_client, "Oxylabs")
@@ -796,11 +993,12 @@ class CodeCrawler:
     """Main crawler class that coordinates the scraping process."""
     
     def __init__(self, scraper_api_key=SCRAPER_API_KEY, oxylabs_username=OXYLABS_USERNAME, 
-                 oxylabs_password=OXYLABS_PASSWORD, data_dir=DATA_DIR):
+                 oxylabs_password=OXYLABS_PASSWORD, data_dir=DATA_DIR, simulation_mode=SIMULATION_MODE):
         # Using hardcoded credentials as requested
         self.scraper_api_client = ScraperAPIClient(scraper_api_key)
         self.oxylabs_client = OxylabsClient(oxylabs_username, oxylabs_password)
         self.code_data = CodeData(data_dir)
+        self.simulation_mode = simulation_mode
         
         # Print confirmation of using hardcoded credentials
         logger.info("Using hardcoded API credentials:")
@@ -808,8 +1006,16 @@ class CodeCrawler:
         logger.info(f"Oxylabs Username: {oxylabs_username}")
         logger.info(f"Oxylabs Password: {oxylabs_password}")
         
+        # Initialize simulation client if in simulation mode or for fallback
+        self.simulation_client = SimulationClient()
+        
         # Initialize platform-specific scrapers
-        self.github_scraper = GitHubScraper(self.scraper_api_client, self.oxylabs_client, self.code_data)
+        self.github_scraper = GitHubScraper(
+            self.scraper_api_client, 
+            self.oxylabs_client, 
+            self.code_data, 
+            self.simulation_client
+        )
         
     def crawl_language(self, language: str, max_items: int = 10):
         """Crawl GitHub for a specific language."""

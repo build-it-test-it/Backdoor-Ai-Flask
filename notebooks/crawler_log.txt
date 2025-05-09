@@ -1,0 +1,118 @@
+2025-05-09 09:51:47,964 - CodeCrawler - INFO - Starting Code Crawler with hardcoded credentials
+2025-05-09 09:51:47,964 - CodeCrawler - INFO - Using hardcoded API credentials:
+2025-05-09 09:51:47,965 - CodeCrawler - INFO - ScraperAPI Key: 7e7b5bcfec02306ed3976851d5bb0009
+2025-05-09 09:51:47,965 - CodeCrawler - INFO - Oxylabs Username: 814bdg_5X90h
+2025-05-09 09:51:47,965 - CodeCrawler - INFO - Oxylabs Password: Hell___245245
+2025-05-09 09:51:47,977 - CodeCrawler - INFO - Starting GitHub crawl for Swift (target: 10 items)
+2025-05-09 09:51:47,981 - CodeCrawler - INFO - Oxylabs fetching: https://github.com/search?q=language%3Aswift&type=repositories&p=1
+2025-05-09 09:51:53,408 - CodeCrawler - INFO - Starting GitHub crawl for Python (target: 10 items)
+2025-05-09 09:51:53,408 - CodeCrawler - INFO - ScraperAPI fetching: https://github.com/search?q=language%3Apython&type=repositories&p=1
+2025-05-09 09:51:53,738 - CodeCrawler - ERROR - ScraperAPI request failed with status 400
+2025-05-09 09:51:53,765 - CodeCrawler - INFO - Saved 0 items for Swift
+2025-05-09 09:51:53,766 - CodeCrawler - INFO - Saved 0 items for Python
+2025-05-09 09:51:53,766 - CodeCrawler - INFO - Saved 0 items for Lua
+2025-05-09 09:51:53,766 - CodeCrawler - INFO - Saved 0 items for C
+2025-05-09 09:51:53,766 - CodeCrawler - INFO - Saved 0 items for C++
+2025-05-09 09:51:53,767 - CodeCrawler - INFO - Saved 0 items for Objective-C
+2025-05-09 09:51:53,767 - CodeCrawler - INFO - Saved 0 items for C#
+2025-05-09 09:51:53,767 - CodeCrawler - INFO - Saved 0 items for Ruby
+2025-05-09 09:51:53,767 - CodeCrawler - INFO - Saved 0 items for JavaScript
+2025-05-09 09:51:53,767 - CodeCrawler - INFO - Saved 0 items for TypeScript
+2025-05-09 09:51:53,768 - CodeCrawler - INFO - Exported dataset with 0 items to collected_data/code_dataset.json
+2025-05-09 09:51:53,768 - CodeCrawler - INFO - Generated summary: collected 0 items across 10 languages
+2025-05-09 09:51:53,768 - CodeCrawler - INFO - Code crawling completed successfully
+2025-05-09 09:54:13,169 - CodeCrawler - INFO - Starting Code Crawler with hardcoded credentials
+2025-05-09 09:54:13,169 - CodeCrawler - INFO - Loaded 0 existing items for Swift
+2025-05-09 09:54:13,169 - CodeCrawler - INFO - Loaded 0 existing items for Python
+2025-05-09 09:54:13,170 - CodeCrawler - INFO - Loaded 0 existing items for Lua
+2025-05-09 09:54:13,170 - CodeCrawler - INFO - Loaded 0 existing items for C
+2025-05-09 09:54:13,170 - CodeCrawler - INFO - Loaded 0 existing items for C++
+2025-05-09 09:54:13,170 - CodeCrawler - INFO - Loaded 0 existing items for Objective-C
+2025-05-09 09:54:13,170 - CodeCrawler - INFO - Loaded 0 existing items for C#
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Loaded 0 existing items for Ruby
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Loaded 0 existing items for JavaScript
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Loaded 0 existing items for TypeScript
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Using hardcoded API credentials:
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - ScraperAPI Key: 7e7b5bcfec02306ed3976851d5bb0009
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Oxylabs Username: 814bdg_5X90h
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Oxylabs Password: Hell___245245
+2025-05-09 09:54:13,203 - CodeCrawler - INFO - Using Simulation Client - generating mock data for testing
+2025-05-09 09:54:13,204 - CodeCrawler - INFO - Starting GitHub crawl for Swift (target: 10 items)
+2025-05-09 09:54:13,211 - CodeCrawler - INFO - Simulation fetching: https://github.com/search?q=language%3Aswift&type=repositories&p=1
+2025-05-09 09:54:13,728 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-1
+2025-05-09 09:54:14,229 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-1...
+2025-05-09 09:54:14,230 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-1
+2025-05-09 09:54:16,930 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-2
+2025-05-09 09:54:17,431 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-2...
+2025-05-09 09:54:17,431 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-2
+2025-05-09 09:54:19,650 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-3
+2025-05-09 09:54:20,151 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-3...
+2025-05-09 09:54:20,151 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-3
+2025-05-09 09:54:22,193 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-4
+2025-05-09 09:54:22,696 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-4...
+2025-05-09 09:54:22,696 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-4
+2025-05-09 09:54:24,429 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-5
+2025-05-09 09:54:24,932 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-5...
+2025-05-09 09:54:24,933 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-5
+2025-05-09 09:54:27,887 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-6
+2025-05-09 09:54:28,388 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-6...
+2025-05-09 09:54:28,388 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-6
+2025-05-09 09:54:31,073 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-7
+2025-05-09 09:54:31,574 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-7...
+2025-05-09 09:54:31,574 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-7
+2025-05-09 09:54:34,230 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-8
+2025-05-09 09:54:34,741 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-8...
+2025-05-09 09:54:34,741 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-8
+2025-05-09 09:54:36,927 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-9
+2025-05-09 09:54:37,437 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-9...
+2025-05-09 09:54:37,437 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-9
+2025-05-09 09:54:40,775 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-10
+2025-05-09 09:54:41,281 - CodeCrawler - INFO - Added new codebase for Swift from https://github.com/example-swift-10...
+2025-05-09 09:54:41,281 - CodeCrawler - INFO - Saved 10 items for Swift
+2025-05-09 09:54:41,282 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-swift-10
+2025-05-09 09:54:43,500 - CodeCrawler - INFO - Starting GitHub crawl for Python (target: 10 items)
+2025-05-09 09:54:43,508 - CodeCrawler - INFO - Simulation fetching: https://github.com/search?q=language%3Apython&type=repositories&p=1
+2025-05-09 09:54:44,067 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-1
+2025-05-09 09:54:44,618 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-1...
+2025-05-09 09:54:44,618 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-1
+2025-05-09 09:54:46,243 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-2
+2025-05-09 09:54:46,743 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-2...
+2025-05-09 09:54:46,744 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-2
+2025-05-09 09:54:48,795 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-3
+2025-05-09 09:54:49,295 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-3...
+2025-05-09 09:54:49,295 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-3
+2025-05-09 09:54:51,246 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-4
+2025-05-09 09:54:51,757 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-4...
+2025-05-09 09:54:51,757 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-4
+2025-05-09 09:54:54,723 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-5
+2025-05-09 09:54:55,234 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-5...
+2025-05-09 09:54:55,234 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-5
+2025-05-09 09:54:58,136 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-6
+2025-05-09 09:54:58,651 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-6...
+2025-05-09 09:54:58,651 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-6
+2025-05-09 09:55:00,288 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-7
+2025-05-09 09:55:00,788 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-7...
+2025-05-09 09:55:00,801 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-7
+2025-05-09 09:55:02,777 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-8
+2025-05-09 09:55:03,278 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-8...
+2025-05-09 09:55:03,294 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-8
+2025-05-09 09:55:05,457 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-9
+2025-05-09 09:55:05,959 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-9...
+2025-05-09 09:55:05,959 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-9
+2025-05-09 09:55:08,937 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-10
+2025-05-09 09:55:09,438 - CodeCrawler - INFO - Added new codebase for Python from https://github.com/example-python-10...
+2025-05-09 09:55:09,439 - CodeCrawler - INFO - Saved 10 items for Python
+2025-05-09 09:55:09,439 - CodeCrawler - INFO - Simulation fetching: https://github.com/example-python-10
+2025-05-09 09:55:11,728 - CodeCrawler - INFO - Saved 10 items for Swift
+2025-05-09 09:55:11,729 - CodeCrawler - INFO - Saved 10 items for Python
+2025-05-09 09:55:11,729 - CodeCrawler - INFO - Saved 0 items for Lua
+2025-05-09 09:55:11,729 - CodeCrawler - INFO - Saved 0 items for C
+2025-05-09 09:55:11,730 - CodeCrawler - INFO - Saved 0 items for C++
+2025-05-09 09:55:11,730 - CodeCrawler - INFO - Saved 0 items for Objective-C
+2025-05-09 09:55:11,731 - CodeCrawler - INFO - Saved 0 items for C#
+2025-05-09 09:55:11,731 - CodeCrawler - INFO - Saved 0 items for Ruby
+2025-05-09 09:55:11,731 - CodeCrawler - INFO - Saved 0 items for JavaScript
+2025-05-09 09:55:11,732 - CodeCrawler - INFO - Saved 0 items for TypeScript
+2025-05-09 09:55:11,733 - CodeCrawler - INFO - Exported dataset with 20 items to collected_data/code_dataset.json
+2025-05-09 09:55:11,733 - CodeCrawler - INFO - Generated summary: collected 20 items across 10 languages
+2025-05-09 09:55:11,734 - CodeCrawler - INFO - Code crawling completed successfully

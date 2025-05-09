@@ -1,0 +1,22 @@
+{
+  "total_items": 20,
+  "by_language": {
+    "Swift": 10,
+    "Python": 10,
+    "Lua": 0,
+    "C": 0,
+    "C++": 0,
+    "Objective-C": 0,
+    "C#": 0,
+    "Ruby": 0,
+    "JavaScript": 0,
+    "TypeScript": 0
+  },
+  "by_type": {
+    "snippet": 0,
+    "codebase": 20
+  },
+  "by_platform": {
+    "GitHub": 20
+  }
+}
