@@ -19,6 +19,7 @@ import random
 import logging
 import re
 import requests
+import traceback
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, quote_plus
 import concurrent.futures
@@ -840,18 +841,26 @@ class GitHubScraper(BaseScraper):
     
     def search_repositories(self, language: str, max_pages: int = 10):
         """Search for repositories in a specific language."""
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        # Use more worker threads for better parallelism and throughput
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             futures = []
             for page in range(1, max_pages + 1):
                 search_url = f"https://github.com/search?q=language%3A{language.lower()}&type=repositories&p={page}"
                 api_client, api_name = self._select_api()
                 futures.append(executor.submit(self._process_search_page, search_url, language, api_client, api_name))
+                # Add a small delay between starting each request to avoid overwhelming the API
+                time.sleep(0.2)
             
+            completed = 0
             for future in concurrent.futures.as_completed(futures):
                 try:
                     future.result()
+                    completed += 1
+                    logger.info(f"Processed {completed}/{max_pages} search pages for {language}")
                 except Exception as e:
                     logger.error(f"Error processing GitHub search page: {str(e)}")
+                    # Log traceback for better debugging
+                    logger.error(f"Exception details: {traceback.format_exc()}")
     
     def _process_search_page(self, search_url: str, language: str, api_client, api_name: str):
         """Process a single search page."""
@@ -919,27 +928,67 @@ class GitHubScraper(BaseScraper):
         
         self._explore_repo_files(repo_url, language)
     
-    def _explore_repo_files(self, repo_url: str, primary_language: str, path: str = "", max_depth: int = 2, current_depth: int = 0):
+    def _explore_repo_files(self, repo_url: str, primary_language: str, path: str = "", max_depth: int = 4, current_depth: int = 0):
         """Recursively explore repository files to extract code."""
         if current_depth > max_depth:
             return
         
-        explore_url = repo_url if not path else f"{repo_url}/tree/master/{path}"
+        # Try different branch names if master doesn't exist
+        branch_names = ["master", "main", "develop", "trunk"]
+        explore_url = None
+        
+        for branch in branch_names:
+            if not path:
+                # Root of repository
+                explore_url = repo_url
+                break
+            else:
+                # Try this branch
+                temp_url = f"{repo_url}/tree/{branch}/{path}"
+                logger.debug(f"Trying URL: {temp_url}")
+                explore_url = temp_url
+                break
+                
+        if not explore_url:
+            logger.warning(f"Could not determine URL for repository path: {path}")
+            return
+            
         api_client, api_name = self._select_api()
         response = api_client.get(explore_url)
         if not response:
+            logger.warning(f"Failed to get response from {explore_url}")
             return
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        file_items = soup.select('a[role="row"]')
         
-        for item in file_items:
-            item_type = "file" if "blob" in str(item) else "directory"
-            item_link = item.get('href')
+        # Try multiple CSS selectors to handle different GitHub HTML structures
+        file_items = []
+        selectors_to_try = [
+            'a[role="row"]',  # Current GitHub structure
+            '.js-navigation-item .js-navigation-open',  # Older GitHub structure
+            'div[role="row"] a',  # Another possible structure
+            'table.files tr.js-navigation-item td.content a'  # Yet another structure
+        ]
+        
+        for selector in selectors_to_try:
+            file_items = soup.select(selector)
+            if file_items:
+                logger.debug(f"Found {len(file_items)} files using selector: {selector}")
+                break
+                
+        if not file_items:
+            logger.warning(f"Could not find file items in {explore_url}")
             
-            if not item_link:
+        processed_count = 0
+        for item in file_items:
+            # Extract item type (file or directory)
+            href = item.get('href', '')
+            if not href:
                 continue
                 
+            item_type = "file" if "/blob/" in href else "directory"
+            item_link = href
+            
             item_name = item_link.split("/")[-1]
             item_path = path + "/" + item_name if path else item_name
             item_url = urljoin("https://github.com", item_link)
@@ -947,52 +996,125 @@ class GitHubScraper(BaseScraper):
             if self.is_url_visited(item_url):
                 continue
             
-            if item_type == "file":
-                detected_language = LanguageDetector.detect_from_extension(item_name)
-                if detected_language:
-                    self._extract_file_content(item_url, detected_language)
-            elif item_type == "directory" and current_depth < max_depth:
-                self._explore_repo_files(repo_url, primary_language, item_path, max_depth, current_depth + 1)
-            
-            self.mark_url_visited(item_url)
-            time.sleep(random.uniform(0.5, 1.5))
+            try:
+                if item_type == "file":
+                    detected_language = LanguageDetector.detect_from_extension(item_name)
+                    if detected_language:
+                        self._extract_file_content(item_url, detected_language)
+                        processed_count += 1
+                elif item_type == "directory" and current_depth < max_depth:
+                    self._explore_repo_files(repo_url, primary_language, item_path, max_depth, current_depth + 1)
+                    processed_count += 1
+                
+                self.mark_url_visited(item_url)
+                
+                # Use a minimal delay between requests to avoid rate limiting
+                # But make it much shorter than before to improve performance
+                time.sleep(0.1)
+                
+            except Exception as e:
+                logger.error(f"Error processing item {item_url}: {str(e)}")
+                logger.error(f"Exception details: {traceback.format_exc()}")
+        
+        logger.info(f"Processed {processed_count} items at depth {current_depth} for path: {path}")
     
     def _extract_file_content(self, file_url: str, language: str):
         """Extract code content from a GitHub file."""
-        api_client, api_name = self._select_api()
-        response = api_client.get(file_url)
-        if not response:
-            return
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        code_element = soup.select_one('table.highlight')
-        if not code_element:
-            return
-        
-        code_lines = []
-        for line in code_element.select('tr'):
-            line_content = line.select_one('td.blob-code')
-            if line_content:
-                code_lines.append(line_content.get_text(strip=True))
+        try:
+            logger.debug(f"Extracting code content from {file_url}")
+            api_client, api_name = self._select_api()
+            response = api_client.get(file_url)
+            if not response:
+                logger.warning(f"Failed to get response from {file_url}")
+                return
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Try multiple CSS selectors to handle different GitHub HTML structures
+            code_element = None
+            code_selectors = [
+                'table.highlight',                           # Current GitHub structure
+                '.js-file-line-container',                   # Alternate structure
+                '.Box-body .highlight',                       # Another possible structure
+                'div[data-target="readme-toc.content"] pre',  # For README files
+                'div.blob-wrapper',                           # Yet another structure
+                'div[itemprop="text"]'                        # Another possible structure
+            ]
+            
+            for selector in code_selectors:
+                code_element = soup.select_one(selector)
+                if code_element:
+                    logger.debug(f"Found code element using selector: {selector}")
+                    break
+            
+            if not code_element:
+                logger.warning(f"Could not find code element in {file_url}")
+                # Try to get raw content as a fallback
+                raw_url = file_url.replace("blob/", "raw/")
+                logger.debug(f"Trying raw URL: {raw_url}")
+                try:
+                    raw_response = api_client.get(raw_url)
+                    if raw_response and raw_response.text:
+                        code_content = raw_response.text
+                        if code_content.strip():
+                            filename = file_url.split("/")[-1]
+                            logger.info(f"Extracted {len(code_content)} bytes of raw code from {filename}")
+                            self._save_code_snippet(code_content, language, file_url, filename)
+                            return
+                except Exception as e:
+                    logger.error(f"Error fetching raw content: {str(e)}")
+                return
+            
+            # Extract code content based on the HTML structure we found
+            code_lines = []
+            
+            # Try different extraction methods
+            if 'table.highlight' in code_selectors and code_element.name == 'table':
+                # Table-based structure
+                for line in code_element.select('tr'):
+                    line_content = line.select_one('td.blob-code')
+                    if line_content:
+                        code_lines.append(line_content.get_text(strip=True))
+            elif code_element.name == 'pre':
+                # Pre element
+                code_lines = code_element.get_text().split('\n')
+            else:
+                # Generic extraction
+                code_text = code_element.get_text()
+                code_lines = code_text.split('\n')
                 
-        code_content = "\n".join(code_lines)
-        
-        if not code_content.strip():
-            return
-        
-        filename = file_url.split("/")[-1]
-        
-        self.code_data.add_item(
-            language=language,
-            item_type="snippet",
-            content=code_content,
-            source_url=file_url,
-            metadata={
-                "filename": filename,
-                "repo_url": "/".join(file_url.split("/")[:5]),
-                "platform": "GitHub"
-            }
-        )
+            code_content = "\n".join(code_lines)
+            
+            if not code_content.strip():
+                logger.warning(f"Extracted empty code content from {file_url}")
+                return
+            
+            filename = file_url.split("/")[-1]
+            logger.info(f"Extracted {len(code_content)} bytes of code from {filename}")
+            
+            self._save_code_snippet(code_content, language, file_url, filename)
+            
+        except Exception as e:
+            logger.error(f"Error extracting code content from {file_url}: {str(e)}")
+            logger.error(f"Exception details: {traceback.format_exc()}")
+    
+    def _save_code_snippet(self, code_content, language, file_url, filename):
+        """Save a code snippet to the code data store."""
+        try:
+            self.code_data.add_item(
+                language=language,
+                item_type="snippet",
+                content=code_content,
+                source_url=file_url,
+                metadata={
+                    "filename": filename,
+                    "repo_url": "/".join(file_url.split("/")[:5]),
+                    "platform": "GitHub"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error saving code snippet {filename}: {str(e)}")
+            logger.error(f"Exception details: {traceback.format_exc()}")
 
 class CodeCrawler:
     """Main crawler class that coordinates the scraping process."""
@@ -1027,14 +1149,18 @@ class CodeCrawler:
         if language not in LANGUAGES:
             logger.error(f"Unsupported language: {language}")
             return
+        
+        # Calculate number of pages to search (assuming ~10 repos per page)
+        # Minimum 5 pages, maximum 20 pages to avoid excessive requests
+        pages_to_search = min(max(5, max_items // 5), 20)
             
-        logger.info(f"Starting GitHub crawl for {language} (target: {max_items} items)")
-        self.github_scraper.search_repositories(language, max_pages=1)
+        logger.info(f"Starting GitHub crawl for {language} (target: {max_items} items, searching {pages_to_search} pages)")
+        self.github_scraper.search_repositories(language, max_pages=pages_to_search)
         
     def crawl_all_languages(self, items_per_language=ITEMS_PER_LANGUAGE):
         """Crawl for all supported languages."""
-        for language in LANGUAGES[:2]:  # Limit to first 2 languages for testing
-            self.crawl_language(language, max_items=10)  # Limit items for testing
+        for language in LANGUAGES:  # Process all supported languages
+            self.crawl_language(language, max_items=items_per_language)
         
         self.code_data.save_data()
         self.code_data.export_dataset()
@@ -1096,12 +1222,17 @@ def main():
         # Create crawler with hardcoded credentials
         crawler = CodeCrawler(SCRAPER_API_KEY, OXYLABS_USERNAME, OXYLABS_PASSWORD, DATA_DIR)
         
-        # Do a test crawl with minimal settings
-        crawler.crawl_all_languages(items_per_language=5)  # Limited for testing
+        # Set simulation mode to False to use real APIs instead of simulation
+        crawler.simulation_mode = False
+        
+        # Use the default ITEMS_PER_LANGUAGE value (1000) for a full production crawl
+        # This will substantially increase the amount of data collected
+        crawler.crawl_all_languages()
         
         logger.info("Code crawling completed successfully")
     except Exception as e:
         logger.error(f"Fatal error in main: {str(e)}")
+        logger.error(f"Exception details: {traceback.format_exc()}")
         print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
