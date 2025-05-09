@@ -1,0 +1,31 @@
+2025-05-09 09:42:51,547 - CodeCrawler - INFO - Starting Code Crawler with hardcoded credentials
+2025-05-09 09:42:51,560 - CodeCrawler - INFO - Using hardcoded API credentials:
+2025-05-09 09:42:51,561 - CodeCrawler - INFO - ScraperAPI Key: 7e7b5bcfec02306ed3976851d5bb0009
+2025-05-09 09:42:51,561 - CodeCrawler - INFO - Oxylabs Username: 814bdg_5X90h
+2025-05-09 09:42:51,561 - CodeCrawler - INFO - Oxylabs Password: Hell___245245
+2025-05-09 09:42:51,561 - CodeCrawler - INFO - This is a simplified version to demonstrate hardcoded credentials
+2025-05-09 09:42:51,561 - CodeCrawler - INFO - For actual crawling, use the full implementation
+2025-05-09 09:45:20,209 - CodeCrawler - INFO - Starting Code Crawler with hardcoded credentials
+2025-05-09 09:45:20,209 - CodeCrawler - INFO - Using hardcoded API credentials:
+2025-05-09 09:45:20,210 - CodeCrawler - INFO - ScraperAPI Key: 7e7b5bcfec02306ed3976851d5bb0009
+2025-05-09 09:45:20,210 - CodeCrawler - INFO - Oxylabs Username: 814bdg_5X90h
+2025-05-09 09:45:20,210 - CodeCrawler - INFO - Oxylabs Password: Hell___245245
+2025-05-09 09:45:20,210 - CodeCrawler - INFO - Starting GitHub crawl for Swift (target: 10 items)
+2025-05-09 09:45:20,215 - CodeCrawler - INFO - Oxylabs fetching: https://github.com/search?q=language%3Aswift&type=repositories&p=1
+2025-05-09 09:45:22,657 - CodeCrawler - ERROR - Oxylabs request error: 'dict' object has no attribute 'encode'
+2025-05-09 09:45:22,658 - CodeCrawler - INFO - Starting GitHub crawl for Python (target: 10 items)
+2025-05-09 09:45:22,658 - CodeCrawler - INFO - ScraperAPI fetching: https://github.com/search?q=language%3Apython&type=repositories&p=1
+2025-05-09 09:45:23,131 - CodeCrawler - ERROR - ScraperAPI request failed with status 400
+2025-05-09 09:45:23,132 - CodeCrawler - INFO - Saved 0 items for Swift
+2025-05-09 09:45:23,132 - CodeCrawler - INFO - Saved 0 items for Python
+2025-05-09 09:45:23,132 - CodeCrawler - INFO - Saved 0 items for Lua
+2025-05-09 09:45:23,132 - CodeCrawler - INFO - Saved 0 items for C
+2025-05-09 09:45:23,132 - CodeCrawler - INFO - Saved 0 items for C++
+2025-05-09 09:45:23,133 - CodeCrawler - INFO - Saved 0 items for Objective-C
+2025-05-09 09:45:23,133 - CodeCrawler - INFO - Saved 0 items for C#
+2025-05-09 09:45:23,133 - CodeCrawler - INFO - Saved 0 items for Ruby
+2025-05-09 09:45:23,133 - CodeCrawler - INFO - Saved 0 items for JavaScript
+2025-05-09 09:45:23,134 - CodeCrawler - INFO - Saved 0 items for TypeScript
+2025-05-09 09:45:23,134 - CodeCrawler - INFO - Exported dataset with 0 items to collected_data/code_dataset.json
+2025-05-09 09:45:23,134 - CodeCrawler - INFO - Generated summary: collected 0 items across 10 languages
+2025-05-09 09:45:23,134 - CodeCrawler - INFO - Code crawling completed successfully
