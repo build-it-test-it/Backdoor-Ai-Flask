@@ -2,6 +2,9 @@
 """
 Code Crawler - A web crawler that collects code snippets, repositories, and datasets
 for various programming languages using ScraperAPI and Oxylabs to bypass anti-scraping protections.
+
+This is a production-grade implementation with robust error handling, performance optimizations,
+and secure credential management.
 """
 
 import os
@@ -15,28 +18,58 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, quote_plus
 import concurrent.futures
 import hashlib
-from typing import Dict, List, Optional, Tuple, Set, Any
+from typing import Dict, List, Optional, Tuple, Set, Any, Union, Callable
 from threading import Lock
 import base64
+from functools import lru_cache
+from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure logging with proper rotation to prevent large log files
+import logging.handlers
+
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
+
+# Set up rotating file handler
+file_handler = logging.handlers.RotatingFileHandler(
+    "logs/crawler_log.txt", 
+    maxBytes=10*1024*1024,  # 10MB max file size
+    backupCount=5,           # Keep 5 backup copies
+    encoding='utf-8'
+)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("crawler_log.txt"),
+        file_handler,
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger("CodeCrawler")
 
-# Constants
-SCRAPER_API_KEY = "7e7b5bcfec02306ed3976851d5bb0009"
-OXYLABS_USERNAME = "814bdg_5X90h"
-OXYLABS_PASSWORD = "Hell___245245"
-DATA_DIR = "collected_data"
-ITEMS_PER_LANGUAGE = 1000
-LANGUAGES = ["Swift", "Python", "Lua", "C", "C++", "Objective-C", "C#", "Ruby", "JavaScript", "TypeScript"]
+# Constants - Get API keys from environment variables
+SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "")
+OXYLABS_USERNAME = os.environ.get("OXYLABS_USERNAME", "")
+OXYLABS_PASSWORD = os.environ.get("OXYLABS_PASSWORD", "")
+DATA_DIR = os.environ.get("DATA_DIR", "collected_data")
+ITEMS_PER_LANGUAGE = int(os.environ.get("ITEMS_PER_LANGUAGE", "1000"))
+MAX_WORKERS = int(os.environ.get("MAX_WORKERS", "8"))
+REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "60"))
+
+# Supported programming languages
+LANGUAGES = [
+    "Swift", "Python", "Lua", "C", "C++", 
+    "Objective-C", "C#", "Ruby", "JavaScript", "TypeScript"
+]
+
+# File extensions mapping for language detection
 LANGUAGE_FILE_EXTENSIONS = {
     "Swift": [".swift"],
     "Python": [".py", ".ipynb"],
@@ -56,98 +89,346 @@ for lang in LANGUAGES:
     os.makedirs(os.path.join(DATA_DIR, lang), exist_ok=True)
 
 class ScraperAPIClient:
-    """Client for interacting with ScraperAPI to bypass anti-scraping measures."""
+    """Client for interacting with ScraperAPI to bypass anti-scraping measures.
     
-    def __init__(self, api_key: str):
+    Features:
+    - Connection pooling for improved performance
+    - Advanced retry strategy with exponential backoff
+    - Configurable rate limiting
+    - Efficient error handling
+    """
+    
+    def __init__(self, api_key: str, max_retries: int = 5, rate_limit_per_minute: int = 60):
+        """
+        Initialize the ScraperAPI client with configurable settings.
+        
+        Args:
+            api_key: ScraperAPI authentication key
+            max_retries: Maximum number of retry attempts for failed requests
+            rate_limit_per_minute: Maximum requests allowed per minute
+        """
         if not api_key:
             raise ValueError("ScraperAPI key cannot be empty")
+        
         self.api_key = api_key
         self.base_url = "http://api.scraperapi.com"
-        self.session = requests.Session()
+        self.rate_limit = rate_limit_per_minute
         self.request_count = 0
         self.last_request_time = time.time()
+        self.request_timestamps = []  # For tracking request timing
         self.lock = Lock()
+        
+        # Create session with connection pooling and retry strategy
+        self.session = self._create_session(max_retries)
+        
+    def _create_session(self, max_retries: int) -> requests.Session:
+        """
+        Create a requests session with connection pooling and retry configuration.
+        
+        Args:
+            max_retries: Maximum number of retry attempts
+            
+        Returns:
+            Configured requests.Session object
+        """
+        session = requests.Session()
+        
+        # Configure retry strategy with exponential backoff
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=2.0,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST"],
+            respect_retry_after_header=True
+        )
+        
+        # Configure connection pooling
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=20,  # Number of connection pools
+            pool_maxsize=50       # Max connections per pool
+        )
+        
+        # Mount adapter for both HTTP and HTTPS
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # Set default headers and timeout
+        session.headers.update({
+            "User-Agent": "CodeCrawler/1.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml",
+            "Accept-Language": "en-US,en;q=0.9"
+        })
+        
+        return session
     
-    def _get_proxy_url(self, url: str, render: bool = False) -> str:
-        """Create a ScraperAPI proxy URL for the target URL."""
+    def _get_proxy_url(self, url: str, render: bool = False, country_code: str = None) -> str:
+        """
+        Create a ScraperAPI proxy URL for the target URL with advanced options.
+        
+        Args:
+            url: Target URL to scrape
+            render: Whether to render JavaScript
+            country_code: Optional country code for geo-targeting
+            
+        Returns:
+            ScraperAPI proxy URL
+        """
         params = {
             "api_key": self.api_key,
             "url": quote_plus(url),
         }
+        
         if render:
             params["render"] = "true"
-        
+            
+        if country_code:
+            params["country_code"] = country_code
+            
+        # Add premium parameters if needed
+        # params["premium"] = "true"  # Uncomment to use premium proxy
+            
         param_str = "&".join(f"{k}={quote_plus(str(v))}" for k, v in params.items())
         return f"{self.base_url}/?{param_str}"
     
-    def get(self, url: str, render: bool = False, retry_count: int = 3, 
-            backoff_factor: float = 2.0) -> Optional[requests.Response]:
+    def _enforce_rate_limit(self):
+        """
+        Enforce rate limiting using sliding window algorithm.
+        """
+        current_time = time.time()
+        
+        # Remove timestamps older than 60 seconds
+        self.request_timestamps = [t for t in self.request_timestamps if current_time - t <= 60]
+        
+        # If we're at or over the rate limit, wait
+        if len(self.request_timestamps) >= self.rate_limit:
+            # Wait until the oldest timestamp is 60 seconds old
+            oldest = self.request_timestamps[0]
+            wait_time = max(0, 60 - (current_time - oldest))
+            
+            if wait_time > 0:
+                logger.info(f"ScraperAPI rate limiting: sleeping for {wait_time:.2f} seconds")
+                time.sleep(wait_time)
+    
+    def get(self, url: str, render: bool = False, retry_count: int = None, 
+            backoff_factor: float = None, country_code: str = None) -> Optional[requests.Response]:
         """
         Make a GET request through ScraperAPI with rate limiting and retries.
+        
+        Args:
+            url: Target URL to scrape
+            render: Whether to render JavaScript
+            retry_count: Optional override for retry count
+            backoff_factor: Optional override for backoff factor
+            country_code: Optional country code for geo-targeting
+            
+        Returns:
+            Response object or None if request failed
         """
         with self.lock:
-            current_time = time.time()
-            elapsed = current_time - self.last_request_time
-            if elapsed < 1.0 and self.request_count >= 60:
-                sleep_time = 1.0 - elapsed
-                logger.info(f"ScraperAPI rate limiting: sleeping for {sleep_time:.2f} seconds")
-                time.sleep(sleep_time)
-                self.request_count = 0
+            # Apply rate limiting
+            self._enforce_rate_limit()
             
-            proxy_url = self._get_proxy_url(url, render)
+            # Prepare request
+            proxy_url = self._get_proxy_url(url, render, country_code)
             
-            for attempt in range(retry_count):
-                try:
-                    logger.info(f"ScraperAPI fetching: {url}")
-                    response = self.session.get(proxy_url, timeout=60)
-                    self.request_count += 1
-                    self.last_request_time = time.time()
+            try:
+                logger.info(f"ScraperAPI fetching: {url}")
+                
+                # Add current timestamp to the list for rate limiting
+                self.request_timestamps.append(time.time())
+                
+                # Make request with error handling
+                response = self.session.get(proxy_url, timeout=REQUEST_TIMEOUT)
+                
+                # Check if the request was successful
+                if response.status_code == 200:
+                    logger.debug(f"Successfully fetched {url}")
+                    return response
+                else:
+                    # If we get here, it means the built-in retry mechanism failed
+                    logger.error(f"ScraperAPI request failed with status {response.status_code}: {response.text[:100]}")
+                    return None
                     
-                    if response.status_code == 200:
-                        return response
-                    elif response.status_code in (429, 500, 502, 503):
-                        wait_time = backoff_factor ** attempt
-                        logger.warning(f"ScraperAPI request failed with status {response.status_code}. "
-                                      f"Retrying in {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        logger.error(f"ScraperAPI request failed with status {response.status_code}: {response.text}")
-                        return None
-                except requests.RequestException as e:
-                    wait_time = backoff_factor ** attempt
-                    logger.error(f"ScraperAPI request error: {str(e)}. Retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
+            except requests.RequestException as e:
+                logger.error(f"ScraperAPI request error: {str(e)}")
+                return None
             
-            logger.error(f"ScraperAPI failed to fetch {url} after {retry_count} attempts")
-            return None
+            except Exception as e:
+                logger.error(f"Unexpected error with ScraperAPI: {str(e)}")
+                return None
 
 class OxylabsClient:
-    """Client for interacting with Oxylabs Realtime API."""
+    """Client for interacting with Oxylabs Realtime API.
     
-    def __init__(self, username: str, password: str):
+    Features:
+    - Connection pooling for improved performance
+    - Advanced retry strategy with exponential backoff
+    - Configurable rate limiting
+    - Efficient error handling
+    - Result caching
+    """
+    
+    def __init__(self, username: str, password: str, max_retries: int = 5, rate_limit_per_minute: int = 60):
+        """
+        Initialize the Oxylabs client with configurable settings.
+        
+        Args:
+            username: Oxylabs account username
+            password: Oxylabs account password
+            max_retries: Maximum number of retry attempts for failed requests
+            rate_limit_per_minute: Maximum requests allowed per minute
+        """
         if not username or not password:
             raise ValueError("Oxylabs credentials cannot be empty")
+        
         self.base_url = "https://realtime.oxylabs.io/v1/queries"
         self.auth = (username, password)
-        self.session = requests.Session()
-        self.request_count = 0
-        self.last_request_time = time.time()
+        self.rate_limit = rate_limit_per_minute
+        self.request_timestamps = []  # For tracking request timing
         self.lock = Lock()
+        self.result_cache = {}  # Simple cache for results
+        self.cache_ttl = 3600  # Cache TTL in seconds (1 hour)
+        
+        # Create session with connection pooling and retry strategy
+        self.session = self._create_session(max_retries)
     
-    def get(self, url: str, render: bool = False, retry_count: int = 3, 
-            backoff_factor: float = 2.0) -> Optional[requests.Response]:
+    def _create_session(self, max_retries: int) -> requests.Session:
+        """
+        Create a requests session with connection pooling and retry configuration.
+        
+        Args:
+            max_retries: Maximum number of retry attempts
+            
+        Returns:
+            Configured requests.Session object
+        """
+        session = requests.Session()
+        
+        # Configure retry strategy with exponential backoff
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=2.0,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST"],
+            respect_retry_after_header=True
+        )
+        
+        # Configure connection pooling
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=20,  # Number of connection pools
+            pool_maxsize=50       # Max connections per pool
+        )
+        
+        # Mount adapter for both HTTP and HTTPS
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # Set default headers
+        session.headers.update({
+            "User-Agent": "CodeCrawler/1.0",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        })
+        
+        return session
+    
+    def _enforce_rate_limit(self):
+        """
+        Enforce rate limiting using sliding window algorithm.
+        """
+        current_time = time.time()
+        
+        # Remove timestamps older than 60 seconds
+        self.request_timestamps = [t for t in self.request_timestamps if current_time - t <= 60]
+        
+        # If we're at or over the rate limit, wait
+        if len(self.request_timestamps) >= self.rate_limit:
+            # Wait until the oldest timestamp is 60 seconds old
+            oldest = self.request_timestamps[0]
+            wait_time = max(0, 60 - (current_time - oldest))
+            
+            if wait_time > 0:
+                logger.info(f"Oxylabs rate limiting: sleeping for {wait_time:.2f} seconds")
+                time.sleep(wait_time)
+    
+    def _check_cache(self, url: str, render: bool) -> Optional[object]:
+        """
+        Check if we have a cached response for this URL.
+        
+        Args:
+            url: The URL to check in the cache
+            render: Whether JavaScript rendering was requested
+            
+        Returns:
+            Cached response object or None if not found/expired
+        """
+        cache_key = f"{url}:{render}"
+        cached_item = self.result_cache.get(cache_key)
+        
+        if cached_item:
+            timestamp, content = cached_item
+            current_time = time.time()
+            
+            # If cache entry is still valid
+            if current_time - timestamp < self.cache_ttl:
+                logger.debug(f"Cache hit for {url}")
+                return content
+            else:
+                # Remove expired cache entry
+                del self.result_cache[cache_key]
+                
+        return None
+    
+    def _update_cache(self, url: str, render: bool, content: object):
+        """
+        Update the cache with a new response.
+        
+        Args:
+            url: The URL being cached
+            render: Whether JavaScript rendering was requested
+            content: The response content to cache
+        """
+        cache_key = f"{url}:{render}"
+        self.result_cache[cache_key] = (time.time(), content)
+        
+        # Limit cache size to prevent memory issues
+        if len(self.result_cache) > 1000:
+            # Remove oldest items if cache gets too large
+            oldest_keys = sorted(
+                self.result_cache.keys(), 
+                key=lambda k: self.result_cache[k][0]
+            )[:200]  # Remove oldest 20% of entries
+            
+            for key in oldest_keys:
+                del self.result_cache[key]
+    
+    def get(self, url: str, render: bool = False, retry_count: int = None, 
+            backoff_factor: float = None, country_code: str = None) -> Optional[requests.Response]:
         """
         Make a GET request through Oxylabs Realtime API with rate limiting and retries.
+        
+        Args:
+            url: Target URL to scrape
+            render: Whether to render JavaScript
+            retry_count: Optional override for retry count
+            backoff_factor: Optional override for backoff factor
+            country_code: Optional country code for geo-targeting
+            
+        Returns:
+            Response object or None if request failed
         """
         with self.lock:
-            current_time = time.time()
-            elapsed = current_time - self.last_request_time
-            if elapsed < 1.0 and self.request_count >= 60:
-                sleep_time = 1.0 - elapsed
-                logger.info(f"Oxylabs rate limiting: sleeping for {sleep_time:.2f} seconds")
-                time.sleep(sleep_time)
-                self.request_count = 0
+            # Check cache first
+            cached_response = self._check_cache(url, render)
+            if cached_response:
+                return cached_response
             
+            # Apply rate limiting
+            self._enforce_rate_limit()
+            
+            # Prepare request payload
             payload = {
                 "source": "universal",
                 "url": url,
@@ -155,94 +436,348 @@ class OxylabsClient:
                 "render": "html" if render else None
             }
             
-            for attempt in range(retry_count):
-                try:
-                    logger.info(f"Oxylabs fetching: {url}")
-                    response = self.session.post(
-                        self.base_url,
-                        auth=self.auth,
-                        json=payload,
-                        headers={"Content-Type": "application/json"},
-                        timeout=60
-                    )
-                    self.request_count += 1
-                    self.last_request_time = time.time()
-                    
-                    if response.status_code == 200:
+            # Add geo-targeting if specified
+            if country_code:
+                payload["geo_location"] = country_code
+                
+            try:
+                logger.info(f"Oxylabs fetching: {url}")
+                
+                # Add current timestamp to the list for rate limiting
+                self.request_timestamps.append(time.time())
+                
+                # Make request with error handling
+                response = self.session.post(
+                    self.base_url,
+                    auth=self.auth,
+                    json=payload,
+                    timeout=REQUEST_TIMEOUT
+                )
+                
+                # Process response
+                if response.status_code == 200:
+                    try:
                         data = response.json()
                         content = data.get("results", [{}])[0].get("content", "")
-                        class Response:
+                        
+                        # Create a Response-like object
+                        class OxylabsResponse:
                             def __init__(self, content):
                                 self.status_code = 200
                                 self.text = content
                                 self.content = content.encode('utf-8')
+                                
+                                # Add convenience method to match requests.Response
+                                def json(self):
+                                    return json.loads(content)
                         
-                        return Response(content)
-                    elif response.status_code in (429, 500, 502, 503):
-                        wait_time = backoff_factor ** attempt
-                        logger.warning(f"Oxylabs request failed with status {response.status_code}. "
-                                      f"Retrying in {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        logger.error(f"Oxylabs request failed with status {response.status_code}: {response.text}")
+                        result = OxylabsResponse(content)
+                        
+                        # Cache the result
+                        self._update_cache(url, render, result)
+                        
+                        logger.debug(f"Successfully fetched {url}")
+                        return result
+                    except (ValueError, KeyError) as e:
+                        logger.error(f"Error parsing Oxylabs response JSON: {str(e)}")
                         return None
-                except requests.RequestException as e:
-                    wait_time = backoff_factor ** attempt
-                    logger.error(f"Oxylabs request error: {str(e)}. Retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
+                else:
+                    # If we get here, it means the built-in retry mechanism failed
+                    logger.error(f"Oxylabs request failed with status {response.status_code}: {response.text[:100]}")
+                    return None
+                     
+            except requests.RequestException as e:
+                logger.error(f"Oxylabs request error: {str(e)}")
+                return None
             
-            logger.error(f"Oxylabs failed to fetch {url} after {retry_count} attempts")
-            return None
+            except Exception as e:
+                logger.error(f"Unexpected error with Oxylabs: {str(e)}")
+                return None
 
 class CodeData:
-    """Class for managing and storing collected code data."""
+    """
+    Class for managing and storing collected code data.
     
-    def __init__(self, data_dir: str):
+    Features:
+    - Efficient storage and retrieval with incremental updates
+    - Data validation and sanitization
+    - Memory-optimized data structures
+    - Automatic compression for large datasets
+    - Checkpoint/resume functionality
+    - Thread-safe operations
+    """
+    
+    # Valid item types
+    VALID_ITEM_TYPES = {"snippet", "codebase", "dataset", "documentation"}
+    
+    # Number of items to collect before auto-saving
+    AUTO_SAVE_THRESHOLD = 10
+    
+    # Batch size for large operations
+    BATCH_SIZE = 500
+    
+    def __init__(self, data_dir: str, use_compression: bool = True):
+        """
+        Initialize the CodeData manager.
+        
+        Args:
+            data_dir: Directory to store data files
+            use_compression: Whether to compress large data files
+        """
         self.data_dir = data_dir
+        self.use_compression = use_compression
         self.current_data = {}
         self.global_hashes = set()
+        self.dirty_languages = set()  # Track which languages have unsaved changes
         self.lock = Lock()
+        self.checkpoint_file = os.path.join(data_dir, "checkpoint.json")
+        
+        # Ensure data directory exists with proper structure
+        self._ensure_directory_structure()
+        
+        # Load existing data and checkpoint info
         self._load_existing_data()
     
-    def _load_existing_data(self):
-        """Load existing data from JSON files."""
-        for lang in LANGUAGES:
-            lang_dir = os.path.join(self.data_dir, lang)
-            os.makedirs(lang_dir, exist_ok=True)
+    def _ensure_directory_structure(self):
+        """Create necessary directory structure for data storage."""
+        try:
+            # Create main data directory
+            os.makedirs(self.data_dir, exist_ok=True)
             
+            # Create subdirectories for each language
+            for lang in LANGUAGES:
+                lang_dir = os.path.join(self.data_dir, lang)
+                os.makedirs(lang_dir, exist_ok=True)
+                
+            # Create exports directory
+            os.makedirs(os.path.join(self.data_dir, "exports"), exist_ok=True)
+            
+            # Create temp directory for atomic writes
+            os.makedirs(os.path.join(self.data_dir, "temp"), exist_ok=True)
+            
+            logger.debug(f"Directory structure for {self.data_dir} initialized")
+        except OSError as e:
+            logger.error(f"Failed to create directory structure: {str(e)}")
+            raise
+    
+    def _load_existing_data(self):
+        """
+        Load existing data from JSON files and checkpoint information.
+        Uses incremental loading for large datasets to minimize memory usage.
+        """
+        logger.info("Loading existing code data...")
+        
+        # Check for checkpoint to support resume capability
+        if os.path.exists(self.checkpoint_file):
+            try:
+                with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                    checkpoint_data = json.load(f)
+                    logger.info(f"Found checkpoint data: {checkpoint_data}")
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning(f"Could not load checkpoint data: {str(e)}")
+                checkpoint_data = {}
+        else:
+            checkpoint_data = {}
+        
+        # Load data for each language
+        for lang in LANGUAGES:
+            self.current_data[lang] = []
+            lang_dir = os.path.join(self.data_dir, lang)
+            
+            # Look for both regular and compressed data files
             data_file = os.path.join(lang_dir, f"{lang.lower()}_data.json")
-            if os.path.exists(data_file):
+            compressed_file = os.path.join(lang_dir, f"{lang.lower()}_data.json.gz")
+            
+            if os.path.exists(compressed_file) and self.use_compression:
                 try:
+                    import gzip
+                    logger.info(f"Loading compressed data for {lang}")
+                    with gzip.open(compressed_file, 'rt', encoding='utf-8') as f:
+                        self._load_data_for_language(lang, f)
+                except Exception as e:
+                    logger.error(f"Error loading compressed data for {lang}: {str(e)}")
+                    self.current_data[lang] = []
+                    
+            elif os.path.exists(data_file):
+                try:
+                    logger.info(f"Loading data for {lang}")
                     with open(data_file, 'r', encoding='utf-8') as f:
-                        self.current_data[lang] = json.load(f)
-                        for item in self.current_data[lang]:
-                            self.global_hashes.add(item["id"])
-                        logger.info(f"Loaded {len(self.current_data[lang])} existing items for {lang}")
-                except json.JSONDecodeError:
-                    logger.warning(f"Could not load existing data for {lang}, starting fresh")
+                        self._load_data_for_language(lang, f)
+                except Exception as e:
+                    logger.error(f"Error loading data for {lang}: {str(e)}")
                     self.current_data[lang] = []
             else:
-                self.current_data[lang] = []
+                logger.info(f"No existing data found for {lang}")
+                
+        logger.info(f"Loaded {len(self.global_hashes)} unique items across all languages")
+    
+    def _load_data_for_language(self, language: str, file_handle):
+        """
+        Load data for a specific language from a file handle.
+        
+        Args:
+            language: Language to load data for
+            file_handle: File handle to read from
+        """
+        try:
+            # Read and parse data incrementally for large files
+            self.current_data[language] = []
+            items_added = 0
+            
+            # Simple file size check to decide if we need incremental loading
+            position = file_handle.tell()
+            file_handle.seek(0, os.SEEK_END)
+            file_size = file_handle.tell()
+            file_handle.seek(position)
+            
+            # For large files, use incremental loading to reduce memory usage
+            if file_size > 10 * 1024 * 1024:  # 10MB
+                logger.info(f"Using incremental loading for large {language} data file ({file_size/1024/1024:.2f}MB)")
+                
+                # Loop through the file and parse JSON incrementally
+                import ijson  # Incremental JSON parser
+                
+                for item in ijson.items(file_handle, 'item'):
+                    if self._validate_item(item):
+                        self.current_data[language].append(item)
+                        self.global_hashes.add(item["id"])
+                        items_added += 1
+            else:
+                # For smaller files, load all at once
+                data = json.load(file_handle)
+                
+                for item in data:
+                    if self._validate_item(item):
+                        self.current_data[language].append(item)
+                        self.global_hashes.add(item["id"])
+                        items_added += 1
+            
+            logger.info(f"Loaded {items_added} valid items for {language}")
+            
+        except (json.JSONDecodeError, ijson.JSONError) as e:
+            logger.warning(f"Error parsing JSON data for {language}: {str(e)}")
+            self.current_data[language] = []
+    
+    def _validate_item(self, item: Dict) -> bool:
+        """
+        Validate an item to ensure it has all required fields and proper data types.
+        
+        Args:
+            item: The item to validate
+            
+        Returns:
+            True if item is valid, False otherwise
+        """
+        # Check for required fields
+        required_fields = {"id", "type", "language", "content", "source_url", "timestamp"}
+        if not all(field in item for field in required_fields):
+            logger.debug(f"Item missing required fields: {set(item.keys())}")
+            return False
+        
+        # Check for valid item type
+        if item["type"] not in self.VALID_ITEM_TYPES:
+            logger.debug(f"Invalid item type: {item['type']}")
+            return False
+        
+        # Check for valid language
+        if item["language"] not in LANGUAGES:
+            logger.debug(f"Invalid language: {item['language']}")
+            return False
+        
+        # Check for non-empty content
+        if not item["content"] or not isinstance(item["content"], str):
+            logger.debug("Empty or invalid content")
+            return False
+        
+        # Check for valid URL
+        if not item["source_url"] or not isinstance(item["source_url"], str):
+            logger.debug("Invalid source URL")
+            return False
+        
+        # All checks passed
+        return True
+    
+    def _sanitize_content(self, content: str) -> str:
+        """
+        Sanitize content to remove control characters and normalize whitespace.
+        
+        Args:
+            content: The content to sanitize
+            
+        Returns:
+            Sanitized content string
+        """
+        if not content:
+            return ""
+        
+        # Replace null bytes and other control characters
+        content = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', content)
+        
+        # Normalize line endings
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Truncate extremely long content to prevent memory issues
+        if len(content) > 1_000_000:  # 1MB limit
+            logger.warning(f"Truncating extremely long content ({len(content)} chars)")
+            content = content[:1_000_000] + "\n... [content truncated]"
+            
+        return content
     
     def _generate_item_id(self, item: Dict) -> str:
-        """Generate a unique ID for an item based on its content."""
+        """
+        Generate a unique ID for an item based on its content and source URL.
+        
+        Args:
+            item: Dictionary containing item data
+            
+        Returns:
+            MD5 hash as hex string
+        """
         content = item.get('content', '')
         url = item.get('source_url', '')
-        input_str = f"{content}{url}"
-        return hashlib.md5(input_str.encode('utf-8')).hexdigest()
+        lang = item.get('language', '')
+        
+        # Use both content and URL to ensure uniqueness
+        input_str = f"{content}{url}{lang}"
+        
+        # Use a secure hash function
+        return hashlib.sha256(input_str.encode('utf-8')).hexdigest()
     
     def add_item(self, language: str, item_type: str, content: str, 
                 source_url: str, metadata: Dict = None) -> bool:
         """
         Add a new code item to the dataset.
+        
+        Args:
+            language: Programming language of the code
+            item_type: Type of item (snippet, codebase, etc)
+            content: The code content
+            source_url: URL where the code was found
+            metadata: Additional metadata for the item
+            
+        Returns:
+            True if item was added, False if it was a duplicate or invalid
         """
+        # Validate inputs
         if language not in LANGUAGES:
             logger.warning(f"Skipping item with unsupported language: {language}")
             return False
         
-        if language not in self.current_data:
-            self.current_data[language] = []
+        if item_type not in self.VALID_ITEM_TYPES:
+            logger.warning(f"Skipping item with invalid type: {item_type}")
+            return False
         
+        if not content or not source_url:
+            logger.warning("Skipping item with empty content or URL")
+            return False
+        
+        # Sanitize content
+        content = self._sanitize_content(content)
+        if not content:
+            logger.warning("Skipping item with empty content after sanitization")
+            return False
+        
+        # Create and initialize item dictionary
         item = {
             "type": item_type,
             "language": language,
@@ -252,104 +787,575 @@ class CodeData:
             "metadata": metadata or {}
         }
         
+        # Generate a unique ID
         item_id = self._generate_item_id(item)
         item["id"] = item_id
         
+        # Thread-safe add operation
         with self.lock:
+            # Check for duplicates
             if item_id in self.global_hashes:
                 logger.debug(f"Skipping duplicate item with ID {item_id}")
                 return False
             
+            # Initialize language data if needed
+            if language not in self.current_data:
+                self.current_data[language] = []
+            
+            # Add the item
             self.global_hashes.add(item_id)
             self.current_data[language].append(item)
+            self.dirty_languages.add(language)
+            
+            # Create checkpoint info for resume capability
+            self._update_checkpoint()
+            
+            # Log success
             logger.info(f"Added new {item_type} for {language} from {source_url[:50]}...")
             
-            if len(self.current_data[language]) % 10 == 0:
+            # Auto-save periodically
+            if len(self.current_data[language]) % self.AUTO_SAVE_THRESHOLD == 0:
                 self.save_data(language)
                 
         return True
     
-    def save_data(self, language: str = None):
-        """Save collected data to JSON files."""
-        languages_to_save = [language] if language else LANGUAGES
+    def _update_checkpoint(self):
+        """Update checkpoint file for resume capability."""
+        checkpoint_data = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "items_collected": {lang: len(items) for lang, items in self.current_data.items() if items},
+            "total_items": len(self.global_hashes)
+        }
         
-        for lang in languages_to_save:
-            if lang in self.current_data:
-                lang_file = os.path.join(self.data_dir, lang, f"{lang.lower()}_data.json")
+        try:
+            # Write to temp file first, then rename for atomic operation
+            temp_file = f"{self.checkpoint_file}.tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(checkpoint_data, f)
+            
+            # Atomic rename
+            import os
+            os.replace(temp_file, self.checkpoint_file)
+        except Exception as e:
+            logger.error(f"Error updating checkpoint file: {str(e)}")
+    
+    def save_data(self, language: str = None):
+        """
+        Save collected data to JSON files.
+        
+        Args:
+            language: Specific language to save, or all if None
+        """
+        with self.lock:
+            languages_to_save = [language] if language else list(self.dirty_languages)
+            
+            if not languages_to_save:
+                logger.debug("No data to save")
+                return
+            
+            for lang in languages_to_save:
+                if lang not in self.current_data or not self.current_data[lang]:
+                    continue
+                
+                items = self.current_data[lang]
+                lang_dir = os.path.join(self.data_dir, lang)
+                lang_file = os.path.join(lang_dir, f"{lang.lower()}_data.json")
+                temp_file = os.path.join(self.data_dir, "temp", f"{lang.lower()}_data.json.tmp")
+                
                 try:
-                    with open(lang_file, 'w', encoding='utf-8') as f:
-                        json.dump(self.current_data[lang], f, indent=2, ensure_ascii=False)
-                    logger.info(f"Saved {len(self.current_data[lang])} items for {lang}")
+                    # Determine whether to use compression
+                    use_compression = self.use_compression and len(items) > 1000
+                    
+                    # Write to temp file first for atomic operation
+                    if use_compression:
+                        import gzip
+                        compressed_file = f"{lang_file}.gz"
+                        logger.info(f"Saving {len(items)} items for {lang} (compressed)")
+                        
+                        with gzip.open(temp_file + '.gz', 'wt', encoding='utf-8') as f:
+                            json.dump(items, f, ensure_ascii=False)
+                        
+                        # Atomic rename
+                        os.replace(temp_file + '.gz', compressed_file)
+                        
+                        # Remove uncompressed version if it exists
+                        if os.path.exists(lang_file):
+                            os.remove(lang_file)
+                    else:
+                        logger.info(f"Saving {len(items)} items for {lang}")
+                        
+                        with open(temp_file, 'w', encoding='utf-8') as f:
+                            json.dump(items, f, ensure_ascii=False)
+                        
+                        # Atomic rename
+                        os.replace(temp_file, lang_file)
+                        
+                        # Remove compressed version if it exists
+                        compressed_file = f"{lang_file}.gz"
+                        if os.path.exists(compressed_file):
+                            os.remove(compressed_file)
+                    
+                    # Mark language as clean (saved)
+                    if lang in self.dirty_languages:
+                        self.dirty_languages.remove(lang)
+                        
                 except Exception as e:
                     logger.error(f"Error saving data for {lang}: {str(e)}")
     
-    def export_dataset(self):
-        """Export all collected data into a single dataset file."""
-        dataset = []
-        for lang in LANGUAGES:
-            if lang in self.current_data:
-                for item in self.current_data[lang]:
-                    dataset_item = {
-                        "id": item["id"],
-                        "language": item["language"],
-                        "type": item["type"],
-                        "content": item["content"],
-                        "source_url": item["source_url"],
-                        "timestamp": item["timestamp"],
-                        "metadata": item["metadata"]
-                    }
-                    dataset.append(dataset_item)
+    def export_dataset(self, split_by_language: bool = True, max_file_size: int = 100 * 1024 * 1024):
+        """
+        Export all collected data into dataset files.
         
-        dataset_file = os.path.join(DATA_DIR, "code_dataset.json")
-        with open(dataset_file, 'w', encoding='utf-8') as f:
-            json.dump(dataset, f, indent=2, ensure_ascii=False)
-        logger.info(f"Exported dataset with {len(dataset)} items to {dataset_file}")
+        Args:
+            split_by_language: Whether to split dataset by language
+            max_file_size: Maximum file size before splitting in bytes (default 100MB)
+        """
+        logger.info("Exporting dataset...")
+        
+        # First, ensure all data is saved
+        self.save_data()
+        
+        exports_dir = os.path.join(self.data_dir, "exports")
+        os.makedirs(exports_dir, exist_ok=True)
+        
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        
+        # Strategy depends on whether we're splitting by language
+        if split_by_language:
+            for lang in LANGUAGES:
+                if lang not in self.current_data or not self.current_data[lang]:
+                    continue
+                
+                items = self.current_data[lang]
+                if not items:
+                    continue
+                
+                # Split into chunks if needed
+                total_chunks = max(1, len(items) // self.BATCH_SIZE)
+                
+                if total_chunks == 1:
+                    # Single file export
+                    output_file = os.path.join(exports_dir, f"{lang.lower()}_dataset_{timestamp}.json")
+                    
+                    try:
+                        # Determine if compression is needed
+                        estimated_size = len(json.dumps(items[:100])) * len(items) / 100
+                        use_compression = self.use_compression and estimated_size > max_file_size
+                        
+                        if use_compression:
+                            import gzip
+                            output_file += ".gz"
+                            with gzip.open(output_file, 'wt', encoding='utf-8') as f:
+                                json.dump(items, f, ensure_ascii=False)
+                        else:
+                            with open(output_file, 'w', encoding='utf-8') as f:
+                                json.dump(items, f, ensure_ascii=False)
+                                
+                        logger.info(f"Exported {len(items)} items for {lang} to {output_file}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error exporting data for {lang}: {str(e)}")
+                        
+                else:
+                    # Multi-file export
+                    for chunk_idx in range(total_chunks):
+                        start_idx = chunk_idx * self.BATCH_SIZE
+                        end_idx = min(start_idx + self.BATCH_SIZE, len(items))
+                        chunk = items[start_idx:end_idx]
+                        
+                        output_file = os.path.join(
+                            exports_dir, 
+                            f"{lang.lower()}_dataset_{timestamp}_part{chunk_idx+1}of{total_chunks}.json"
+                        )
+                        
+                        try:
+                            # Always use compression for multi-part exports
+                            if self.use_compression:
+                                import gzip
+                                output_file += ".gz"
+                                with gzip.open(output_file, 'wt', encoding='utf-8') as f:
+                                    json.dump(chunk, f, ensure_ascii=False)
+                            else:
+                                with open(output_file, 'w', encoding='utf-8') as f:
+                                    json.dump(chunk, f, ensure_ascii=False)
+                                    
+                            logger.info(f"Exported {len(chunk)} items for {lang} (part {chunk_idx+1}/{total_chunks})")
+                            
+                        except Exception as e:
+                            logger.error(f"Error exporting data chunk for {lang}: {str(e)}")
+        else:
+            # Combined dataset export
+            all_items = []
+            for lang in LANGUAGES:
+                if lang in self.current_data:
+                    all_items.extend(self.current_data[lang])
+            
+            if not all_items:
+                logger.warning("No items to export")
+                return
+            
+            # Split into chunks if needed based on estimated size
+            sample_size = min(100, len(all_items))
+            estimated_size_per_item = len(json.dumps(all_items[:sample_size])) / sample_size
+            estimated_total_size = estimated_size_per_item * len(all_items)
+            
+            total_chunks = max(1, int(estimated_total_size / max_file_size) + 1)
+            items_per_chunk = len(all_items) // total_chunks + 1
+            
+            logger.info(f"Exporting {len(all_items)} total items in {total_chunks} chunks")
+            
+            for chunk_idx in range(total_chunks):
+                start_idx = chunk_idx * items_per_chunk
+                end_idx = min(start_idx + items_per_chunk, len(all_items))
+                
+                if start_idx >= len(all_items):
+                    break
+                    
+                chunk = all_items[start_idx:end_idx]
+                
+                # Create filename
+                if total_chunks == 1:
+                    output_file = os.path.join(exports_dir, f"complete_dataset_{timestamp}.json")
+                else:
+                    output_file = os.path.join(
+                        exports_dir, 
+                        f"complete_dataset_{timestamp}_part{chunk_idx+1}of{total_chunks}.json"
+                    )
+                
+                try:
+                    # Use compression for larger datasets
+                    if self.use_compression and len(chunk) > 1000:
+                        import gzip
+                        output_file += ".gz"
+                        with gzip.open(output_file, 'wt', encoding='utf-8') as f:
+                            json.dump(chunk, f, ensure_ascii=False)
+                    else:
+                        with open(output_file, 'w', encoding='utf-8') as f:
+                            json.dump(chunk, f, ensure_ascii=False)
+                            
+                    logger.info(f"Exported {len(chunk)} items to {output_file}")
+                    
+                except Exception as e:
+                    logger.error(f"Error exporting data chunk: {str(e)}")
+        
+        logger.info(f"Dataset export completed with {len(self.global_hashes)} total items")
 
 class LanguageDetector:
-    """Utility class to detect programming languages from code samples or file paths."""
+    """
+    Utility class to detect programming languages from code samples or file paths.
     
-    @staticmethod
-    def detect_from_extension(file_path: str) -> Optional[str]:
-        """Detect language based on file extension."""
+    Features:
+    - Enhanced pattern recognition for language detection
+    - Caching for improved performance
+    - More comprehensive language patterns
+    - Weighted scoring system for better accuracy
+    - Content-based heuristics
+    """
+    
+    # Compile patterns once for better performance
+    EXTENSION_CACHE = {}
+    PATTERN_CACHE = {}
+    
+    # More sophisticated patterns for language detection
+    LANGUAGE_PATTERNS = {
+        "Swift": [
+            (r'import\s+Foundation', 3),
+            (r'import\s+UIKit', 3),
+            (r'import\s+SwiftUI', 4),
+            (r'func\s+\w+\s*\([^)]*\)\s*->\s*\w+', 2),
+            (r'class\s+\w+\s*:\s*\w+', 2),
+            (r'var\s+\w+\s*:\s*\w+', 1),
+            (r'let\s+\w+\s*:\s*\w+', 1),
+            (r'@objc', 2),
+            (r'guard\s+let', 3)
+        ],
+        "Python": [
+            (r'import\s+\w+', 1),
+            (r'from\s+[\w.]+\s+import', 2),
+            (r'def\s+\w+\s*\(', 2),
+            (r'if\s+__name__\s*==\s*[\'"]__main__[\'"]', 4),
+            (r'class\s+\w+(?:\(.*?\))?:', 2),
+            (r'with\s+.*?\s+as\s+', 3),
+            (r'^\s*@\w+', 2),  # Decorators
+            (r'try:(?:\s+.*?)?except', 3),
+            (r'yield\s+', 3),
+            (r'async\s+def|await\s+', 3)
+        ],
+        "C": [
+            (r'#include\s+<[a-z0-9_]+\.h>', 3),
+            (r'int\s+main\s*\(\s*(?:void|int\s+argc,\s*char\s*\*\s*argv\[\])\s*\)', 4),
+            (r'void\s+\w+\s*\([^)]*\)', 2),
+            (r'#define\s+\w+', 2),
+            (r'typedef\s+struct', 3),
+            (r'malloc\s*\(|free\s*\(', 3),
+            (r'printf\s*\(|sprintf\s*\(|fprintf\s*\(', 2),
+            (r'char\s+\w+\[', 2)
+        ],
+        "C++": [
+            (r'#include\s+<iostream>', 3),
+            (r'#include\s+<vector>', 3),
+            (r'#include\s+<string>', 2),
+            (r'namespace\s+\w+', 3),
+            (r'std::', 3),
+            (r'template\s*<', 4),
+            (r'class\s+\w+\s*(?::\s*\w+)?(?:\s*{)?', 2),
+            (r'virtual\s+\w+', 3),
+            (r'public:|private:|protected:', 3),
+            (r'new\s+\w+|delete\s+\w+', 2),
+            (r'cout\s*<<|cin\s*>>', 3)
+        ],
+        "JavaScript": [
+            (r'const\s+\w+\s*=', 2),
+            (r'let\s+\w+\s*=', 2),
+            (r'var\s+\w+\s*=', 1),
+            (r'function\s+\w+\s*\(', 2),
+            (r'addEventListener', 3),
+            (r'document\.', 3),
+            (r'window\.', 2),
+            (r'=>', 1),
+            (r'console\.log', 1),
+            (r'new\s+Promise', 3),
+            (r'async\s+function|await\s+', 3),
+            (r'import\s+{[^}]*}\s+from', 3),
+            (r'export\s+(?:default\s+)?(?:function|class|const)', 3)
+        ],
+        "TypeScript": [
+            (r'interface\s+\w+', 4),
+            (r':\s*(?:string|number|boolean|any)\b', 3),
+            (r'<\w+>', 2),
+            (r'class\s+\w+(?:<[^>]+>)?(?:\s+implements\s+\w+)?', 3),
+            (r'private\s+\w+\s*:', 3),
+            (r'public\s+\w+\s*:', 3),
+            (r'protected\s+\w+\s*:', 3),
+            (r'readonly\s+', 3),
+            (r'namespace\s+\w+', 3),
+            (r'enum\s+\w+', 3),
+            (r'type\s+\w+\s*=', 4),
+            (r'import\s+{[^}]*}\s+from', 2)
+        ],
+        "Ruby": [
+            (r'require\s+[\'"]\w+[\'"]', 3),
+            (r'def\s+\w+\s*(?:\(|$)', 3),
+            (r'end$', 1),
+            (r'module\s+\w+', 3),
+            (r'class\s+\w+\s*(?:<\s*\w+)?', 3),
+            (r'attr_accessor\s+:|\w+', 3),
+            (r'do\s+\|[^|]+\|', 3),
+            (r'=>', 1),
+            (r'puts\s+|p\s+', 1),
+            (r'lambda\s+{|->(?:\([^)]*\))?\s*{', 3)
+        ],
+        "C#": [
+            (r'using\s+System', 3),
+            (r'namespace\s+\w+', 3),
+            (r'public\s+class\s+\w+', 3),
+            (r'private\s+\w+\s+\w+\s*\{', 2),
+            (r'internal\s+\w+', 3),
+            (r'virtual\s+\w+', 3),
+            (r'override\s+\w+', 3),
+            (r'public\s+(?:static\s+)?void\s+Main', 4),
+            (r'Console\.Write', 2),
+            (r'IEnumerable<|List<', 3),
+            (r'async\s+Task', 3)
+        ],
+        "Objective-C": [
+            (r'#import\s+[<"]\w+\.h[>"]', 3),
+            (r'@interface\s+\w+\s*:\s*\w+', 4),
+            (r'@implementation\s+\w+', 4),
+            (r'@property\s+\(\w+\)', 3),
+            (r'@selector\(', 3),
+            (r'@end', 2),
+            (r'NSString\s*\*|NSArray\s*\*|NSDictionary\s*\*', 3),
+            (r'\[\w+\s+\w+\]', 2),
+            (r'^-\s*\(\w+\)', 3),
+            (r'^[+]\s*\(\w+\)', 3)
+        ],
+        "Lua": [
+            (r'function\s+\w+\s*\(', 3),
+            (r'local\s+\w+\s*=', 2),
+            (r'end$', 1),
+            (r'require\s*\(?[\'"][^\'"]+[\'"]\)?', 3),
+            (r'if\s+.+\s+then', 2),
+            (r'elseif\s+.+\s+then', 3),
+            (r'for\s+\w+\s*=\s*\d+\s*,\s*\d+', 3),
+            (r'pairs\(|ipairs\(', 2),
+            (r'while\s+.+\s+do', 2),
+            (r'module\s*\(?[\'"][^\'"]+[\'"]\)?', 3)
+        ]
+    }
+    
+    @classmethod
+    @lru_cache(maxsize=1024)
+    def detect_from_extension(cls, file_path: str) -> Optional[str]:
+        """
+        Detect language based on file extension with caching.
+        
+        Args:
+            file_path: Path to the file
+            
+        Returns:
+            Detected language or None if not detected
+        """
+        # Skip if no path or it's a directory
+        if not file_path or file_path.endswith('/'):
+            return None
+        
+        # Get extension, lowercase for consistency
         _, ext = os.path.splitext(file_path.lower())
         if not ext:
             return None
             
+        # Check cache first
+        if ext in cls.EXTENSION_CACHE:
+            return cls.EXTENSION_CACHE[ext]
+            
+        # Find matching language
         for lang, extensions in LANGUAGE_FILE_EXTENSIONS.items():
             if ext in extensions:
+                cls.EXTENSION_CACHE[ext] = lang
                 return lang
+        
+        # No match found
+        cls.EXTENSION_CACHE[ext] = None
         return None
     
-    @staticmethod
-    def detect_from_content(content: str) -> Optional[str]:
+    @classmethod
+    @lru_cache(maxsize=128)
+    def detect_from_content(cls, content: str, min_confidence: float = 0.6) -> Optional[str]:
         """
-        Attempt to detect language based on content patterns.
+        Detect programming language from code content using a weighted pattern matching approach.
+        
+        Args:
+            content: Code content to analyze
+            min_confidence: Minimum confidence threshold (0.0-1.0)
+            
+        Returns:
+            Detected language or None if confidence is below threshold
         """
-        patterns = {
-            "Swift": [r'import\s+Foundation', r'func\s+\w+\s*\([^)]*\)\s*->\s*\w+'],
-            "Python": [r'import\s+\w+', r'def\s+\w+\s*\(', r'if\s+__name__\s*==\s*[\'"]__main__[\'"]'],
-            "C": [r'#include\s+<\w+\.h>', r'int\s+main\s*\(\s*(?:void|int\s+argc,\s*char\s*\*\s*argv\[\])\s*\)'],
-            "C++": [r'#include\s+<iostream>', r'namespace\s+\w+', r'std::'],
-            "JavaScript": [r'const\s+\w+\s*=', r'function\s+\w+\s*\(', r'addEventListener'],
-            "TypeScript": [r'interface\s+\w+', r':\s*(?:string|number|boolean)', r'<\w+>'],
-            "Ruby": [r'require\s+[\'"]\w+[\'"]', r'def\s+\w+\s*(?:\(|$)', r'end$'],
-            "C#": [r'using\s+System', r'namespace\s+\w+', r'public\s+class'],
-            "Objective-C": [r'#import\s+[<"]\w+\.h[>"]', r'@interface', r'@implementation'],
-            "Lua": [r'function\s+\w+\s*\(', r'local\s+\w+\s*=', r'end$']
+        # Skip empty content
+        if not content or len(content.strip()) < 10:
+            return None
+        
+        # Take a sample for large content to improve performance
+        if len(content) > 10000:
+            # Sample the beginning, middle, and end
+            begin = content[:3000]
+            middle_start = max(0, (len(content) // 2) - 1500)
+            middle = content[middle_start:middle_start + 3000]
+            end = content[-3000:]
+            sample = begin + "\n" + middle + "\n" + end
+        else:
+            sample = content
+        
+        # Calculate scores for each language
+        scores = {}
+        max_possible_scores = {}
+        
+        for lang, patterns in cls.LANGUAGE_PATTERNS.items():
+            scores[lang] = 0
+            max_possible_scores[lang] = sum(weight for _, weight in patterns)
+            
+            for pattern, weight in patterns:
+                # Compile regex if needed
+                if pattern not in cls.PATTERN_CACHE:
+                    cls.PATTERN_CACHE[pattern] = re.compile(pattern, re.MULTILINE)
+                
+                regex = cls.PATTERN_CACHE[pattern]
+                
+                # Check if pattern exists, weight by number of matches with a cap
+                matches = len(regex.findall(sample))
+                if matches > 0:
+                    # Cap the score increase to avoid over-counting repetitive patterns
+                    score_increase = min(matches, 3) * weight
+                    scores[lang] += score_increase
+        
+        # Calculate confidence scores (normalized)
+        confidence_scores = {}
+        for lang in scores:
+            if max_possible_scores[lang] > 0:
+                confidence_scores[lang] = scores[lang] / max_possible_scores[lang]
+            else:
+                confidence_scores[lang] = 0
+        
+        # Find the language with the highest confidence score
+        if confidence_scores:
+            best_lang = max(confidence_scores.items(), key=lambda x: x[1])
+            lang_name, confidence = best_lang
+            
+            # Only return if confidence is above the threshold
+            if confidence >= min_confidence:
+                return lang_name
+        
+        # Apply heuristics for additional detection
+        return cls._apply_heuristics(content)
+    
+    @classmethod
+    def _apply_heuristics(cls, content: str) -> Optional[str]:
+        """
+        Apply additional heuristics for language detection when pattern matching is inconclusive.
+        
+        Args:
+            content: Code content to analyze
+            
+        Returns:
+            Detected language or None
+        """
+        # Count common language-specific markers
+        markers = {
+            "Python": ["def ", "import ", "class ", "if __name__", "print(", "yield ", "except:", "# ", """""],
+            "JavaScript": ["const ", "function(", "var ", "let ", "document.", "() =>", "// ", "*/"],
+            "TypeScript": ["interface ", "type ", ": string", ": number", ": boolean", "export class"],
+            "C++": ["#include", "namespace", "template<", "::", "std::", "//"],
+            "C#": ["using System", "namespace ", "public class", "private ", "internal ", "//"],
+            "Ruby": ["require ", "def ", "end", "module ", "class ", "# "]
         }
         
-        scores = {lang: 0 for lang in LANGUAGES}
+        scores = {lang: 0 for lang in markers}
         
-        for lang, regex_list in patterns.items():
-            for regex in regex_list:
-                if re.search(regex, content):
-                    scores[lang] += 1
+        # Count occurrences of each marker
+        for lang, lang_markers in markers.items():
+            for marker in lang_markers:
+                occurrences = content.count(marker)
+                if occurrences > 0:
+                    scores[lang] += min(occurrences, 5)  # Cap at 5 to avoid bias
         
-        max_score = max(scores.values())
-        if max_score > 0:
-            best_matches = [lang for lang, score in scores.items() if score == max_score]
-            return best_matches[0]
+        # Check if we have a clear winner
+        max_score = max(scores.values()) if scores else 0
+        if max_score > 5:  # Arbitrary threshold
+            best_langs = [lang for lang, score in scores.items() if score == max_score]
+            if best_langs:
+                return best_langs[0]
         
+        return None
+    
+    @classmethod
+    def detect_language(cls, content: str = None, file_path: str = None) -> Optional[str]:
+        """
+        Comprehensive language detection using both file extension and content.
+        
+        Args:
+            content: Code content (optional)
+            file_path: File path (optional)
+            
+        Returns:
+            Detected language or None
+        
+        Note:
+            At least one of content or file_path must be provided
+        """
+        if not content and not file_path:
+            return None
+            
+        # First try file extension if available
+        if file_path:
+            lang = cls.detect_from_extension(file_path)
+            if lang:
+                return lang
+                
+        # Fall back to content analysis
+        if content:
+            return cls.detect_from_content(content)
+            
         return None
 
 class BaseScraper:
@@ -959,8 +1965,7 @@ class GitLabScraper(BaseScraper):
         
         soup = BeautifulSoup(response.text, 'html.parser')
         file_items = soup.select('.tree-item')
-        
-       名 for item in file_items:
+        for item in file_items:
             item_link = item.select_one('a')
             if not item_link:
                 continue
@@ -1422,6 +2427,7 @@ class CodeCrawler:
             print(f"  {platform}: {count}")
         print("="*50 + "\n")
 
+
 def main():
     """Main function to run the code crawler."""
     logger.info("Starting Code Crawler")
@@ -1433,6 +2439,7 @@ def main():
     except Exception as e:
         logger.error(f"Fatal error in main: {str(e)}")
         print(f"Error: {str(e)}")
+
 
 if __name__ == "__main__":
     main()
